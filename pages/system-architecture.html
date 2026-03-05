@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="../">
+  <title>System Architecture — Multiplus AI Architecture</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <div class="layout">
+    <header class="site-header">
+      <div class="site-title-wrap">
+        <h1 class="site-title">Multiplus AI Financial Intelligence Platform</h1>
+        <p class="site-subtitle">Architecture Documentation</p>
+      </div>
+      <div class="search-wrap">
+        <input type="search" id="search-input" class="search-input" placeholder="Search documentation…" aria-label="Search">
+        <div id="search-results" aria-live="polite"></div>
+      </div>
+    </header>
+    <nav class="sidebar">
+      <ul class="sidebar-nav">
+<li><a href="index.html">Home</a></li>
+<li><a href="pages/preface.html">Preface</a></li>
+<li><a href="pages/problem-context.html">Problem Context</a></li>
+<li><a href="pages/system-overview.html">System Overview</a></li>
+<li><a href="pages/system-architecture.html">System Architecture</a></li>
+<li><a href="pages/ai-platform.html">AI Platform</a></li>
+<li><a href="pages/data-architecture.html">Data Architecture</a></li>
+<li><a href="pages/financial-data-processing.html">Financial Data Processing</a></li>
+<li><a href="pages/model-strategy.html">Model Strategy</a></li>
+<li><a href="pages/agent-architecture.html">Agent Architecture</a></li>
+<li><a href="pages/recommendation-engine.html">Recommendation Engine</a></li>
+<li><a href="pages/document-intelligence.html">Document Intelligence</a></li>
+<li><a href="pages/compliance.html">Compliance</a></li>
+<li><a href="pages/triggers.html">Triggers</a></li>
+<li><a href="pages/monitoring.html">Monitoring</a></li>
+<li><a href="pages/infrastructure.html">Infrastructure</a></li>
+<li><a href="pages/security.html">Security</a></li>
+<li><a href="pages/future-extensions.html">Future Extensions</a></li>
+      </ul>
+    </nav>
+    <main class="main-content">
+<h1 id="part">SYSTEM ARCHITECTURE</h1>
+<h2 id="s-4-1">Overall Platform Architecture</h2>
+<p>The Multiplus AI Financial Intelligence Platform is designed as a modular and layered system architecture that integrates user-facing financial services with data infrastructure, analytical intelligence systems, and external financial data providers.</p>
+<p>The architecture is structured to ensure scalability, reliability, and clear separation of responsibilities across different components of the system. Each layer of the architecture performs a specific function within the overall financial intelligence workflow.</p>
+<p>The platform is designed to process large volumes of financial data, perform automated financial analysis, and generate personalized recommendations while maintaining strict control over data flows and system interactions.</p>
+<p>This section provides a comprehensive overview of the platform architecture and explains how the major system components interact with each other.</p>
+<h3 id="s-4-1-1">Architectural Design Principles</h3>
+<p>The design of the Multiplus platform is guided by several architectural principles that ensure the system remains scalable and maintainable as it evolves.</p>
+<p>Key architectural principles include:</p>
+<ul>
+<li>Layered architecture to separate system responsibilities</li>
+<li>Modular system components to allow independent development and scaling</li>
+<li>Data-driven intelligence pipelines for financial analysis</li>
+<li>Service-oriented integration between platform components</li>
+<li>Scalable AI infrastructure for analytical workloads</li>
+<li>Secure handling of sensitive financial data</li>
+</ul>
+<p>These principles ensure that the platform can support complex financial intelligence operations while maintaining operational stability.</p>
+<h3 id="s-4-1-2">High-Level Platform Architecture</h3>
+<p>The Multiplus system is composed of five primary architectural layers:</p>
+<ul>
+<li>User Layer</li>
+<li>Platform Application Layer</li>
+<li>AI Intelligence Layer</li>
+<li>Data Infrastructure Layer</li>
+<li>External Data Sources</li>
+</ul>
+<p>Each layer is responsible for a specific set of operations within the financial intelligence pipeline.</p>
+<p>The overall architecture can be represented as follows:</p>
+<ul>
+<li>User Layer</li>
+<li>(Web Applications, Mobile Applications)</li>
+<li>↓</li>
+<li>Platform Application Layer</li>
+<li>(API Gateway, Authentication, Backend Services)</li>
+<li>↓</li>
+<li>AI Financial Intelligence Layer</li>
+<li>(Financial Analysis, AI Agents, Recommendation Engine)</li>
+<li>↓</li>
+<li>Data Infrastructure Layer</li>
+<li>(Data Pipelines, Data Lake, Feature Store, Vector Database)</li>
+<li>↓</li>
+<li>External Data Sources</li>
+<li>(Banks, Investment Platforms, Market Data Providers)</li>
+</ul>
+<p>This layered architecture ensures that data flows in a controlled manner from external sources through the intelligence platform before being presented to users.</p>
+<h3 id="s-4-1-3">End-to-End System Flow</h3>
+<p>The platform operates through a continuous cycle of data ingestion, financial analysis, and insight generation.</p>
+<p>The end-to-end workflow of the system can be summarized as follows:</p>
+<ul>
+<li>External Financial Data Sources</li>
+<li>↓</li>
+<li>Data Ingestion Pipelines</li>
+<li>↓</li>
+<li>Financial Data Storage and Processing</li>
+<li>↓</li>
+<li>AI Financial Intelligence Platform</li>
+<li>↓</li>
+<li>Recommendation and Insight Generation</li>
+<li>↓</li>
+<li>Platform Backend Services</li>
+<li>↓</li>
+<li>User Applications</li>
+</ul>
+<p>Each stage of this pipeline contributes to transforming raw financial data into structured financial insights that can be delivered to users.</p>
+<h3 id="s-4-1-4">User Interaction Flow</h3>
+<p>Users interact with the Multiplus platform through web or mobile applications. These applications provide interfaces for viewing financial data, managing investments, and receiving financial recommendations.</p>
+<p>When a user performs an action within the platform, the request flows through several system components before generating a response.</p>
+<p>A typical interaction flow is illustrated below:</p>
+<ul>
+<li>User Action</li>
+<li>↓</li>
+<li>User Interface (Web or Mobile Application)</li>
+<li>↓</li>
+<li>API Gateway</li>
+<li>↓</li>
+<li>Backend Platform Services</li>
+<li>↓</li>
+<li>AI Intelligence Platform</li>
+<li>↓</li>
+<li>Recommendation or Insight Response</li>
+<li>↓</li>
+<li>User Interface</li>
+</ul>
+<p>This structure ensures that the complexity of financial analysis and AI computation remains hidden behind platform services that manage system interactions.</p>
+<h3 id="s-4-1-5">Financial Data Flow</h3>
+<p>Financial data is the primary input to the AI Financial Intelligence Platform. This data originates from multiple sources and must be processed through structured pipelines before it can be used by analytical systems.</p>
+<p>The financial data flow within the system follows this sequence:</p>
+<pre class="diagram-block">External Financial Data Providers
+        ↓
+Data Integration Layer
+        ↓
+Data Ingestion Pipelines
+        ↓
+Data Cleaning and Normalization
+        ↓
+Financial Data Storage
+        ↓
+Feature Engineering
+        ↓
+AI Financial Intelligence Platform</pre>
+<p>This pipeline ensures that all financial data used by the AI platform is validated, standardized, and enriched with relevant financial features.</p>
+<h3 id="s-4-1-6">AI Intelligence Processing</h3>
+<p>The AI Intelligence Layer performs the analytical operations required to interpret financial data and generate insights.</p>
+<p>This layer consists of several analytical modules that operate on structured financial datasets.</p>
+<p>Key analytical components include:</p>
+<ul>
+<li>financial data interpretation modules</li>
+<li>user financial profile generation systems</li>
+<li>portfolio intelligence modules</li>
+<li>financial product evaluation engines</li>
+<li>recommendation generation pipelines</li>
+<li>AI agent reasoning systems</li>
+<li>The internal intelligence workflow can be illustrated as follows:</li>
+<li>Structured Financial Data</li>
+<li>↓</li>
+<li>User Financial Profile Construction</li>
+<li>↓</li>
+<li>Portfolio Intelligence Analysis</li>
+<li>↓</li>
+<li>Risk Profiling</li>
+<li>↓</li>
+<li>Product Evaluation</li>
+<li>↓</li>
+<li>Recommendation Engine</li>
+<li>↓</li>
+<li>Explainable Financial Insights</li>
+</ul>
+<p>These processes collectively transform financial data into actionable insights that support user financial decision-making.</p>
+<h3 id="s-4-1-7">Data Infrastructure Architecture</h3>
+<p>The Data Infrastructure Layer supports the entire financial intelligence platform by providing storage, processing, and retrieval capabilities for financial data.</p>
+<p>This layer includes several specialized data systems designed to handle different types of financial information.</p>
+<p>Typical data infrastructure components include:</p>
+<ul>
+<li>Data ingestion pipelines for collecting financial data</li>
+<li>Data lake storage for raw financial datasets</li>
+<li>Relational databases for structured financial data</li>
+<li>Feature stores for machine learning features</li>
+<li>Vector databases for document embeddings and semantic search</li>
+<li>The architecture of the data infrastructure layer can be represented as follows:</li>
+<li>Data Ingestion Pipelines</li>
+<li>↓</li>
+<li>Raw Data Storage (Data Lake)</li>
+<li>↓</li>
+<li>Data Processing and Normalization</li>
+<li>↓</li>
+<li>Structured Financial Databases</li>
+<li>↓</li>
+<li>Feature Store</li>
+<li>↓</li>
+<li>AI Intelligence Systems</li>
+</ul>
+<p>This infrastructure ensures that financial data can be efficiently stored and retrieved by analytical systems.</p>
+<h3 id="s-4-1-8">External Integration Layer</h3>
+<p>The Multiplus platform interacts with multiple external systems that provide financial data and financial services.</p>
+<p>External integrations may include:</p>
+<ul>
+<li>banking systems</li>
+<li>financial data aggregators</li>
+<li>asset management companies</li>
+<li>investment platforms</li>
+<li>market data providers</li>
+</ul>
+<p>These integrations typically occur through secure APIs or document ingestion pipelines.</p>
+<p>The integration architecture can be illustrated as follows:</p>
+<ul>
+<li>External Financial Institutions</li>
+<li>↓</li>
+<li>Secure API Integrations</li>
+<li>↓</li>
+<li>Multiplus Data Integration Layer</li>
+<li>↓</li>
+<li>Internal Data Pipelines</li>
+</ul>
+<p>This integration layer ensures that financial data is securely transmitted to the platform while maintaining compliance with financial data protection standards.</p>
+<h3 id="s-4-1-9">Architectural Benefits</h3>
+<p>The architecture of the Multiplus AI Financial Intelligence Platform provides several key advantages.</p>
+<p>These include:</p>
+<ul>
+<li>clear separation between platform services and intelligence systems</li>
+<li>scalable infrastructure for financial data processing</li>
+<li>modular AI systems that can evolve independently</li>
+<li>flexible integration with external financial providers</li>
+<li>consistent financial data processing pipelines</li>
+</ul>
+<p>This architectural approach allows the system to support both current financial intelligence capabilities and future expansion into more advanced AI-driven financial services.</p>
+<p>The next section describes the core system layers in greater detail and explains how each layer contributes to the operation of the Multiplus AI Financial Intelligence Platform.</p>
+<h2 id="s-4-2">Core System Layers</h2>
+<p>The Multiplus AI Financial Intelligence Platform is organized into a set of core system layers that separate responsibilities across user interaction, operational services, artificial intelligence processing, and financial data infrastructure.</p>
+<p>This layered architecture enables the platform to maintain modularity while supporting complex financial intelligence workflows. Each layer has a clearly defined role and interacts with adjacent layers through controlled interfaces.</p>
+<p>The core system layers are:</p>
+<p>User Layer</p>
+<p>Platform Layer</p>
+<p>AI Intelligence Layer</p>
+<p>Data Infrastructure Layer</p>
+<p>External Integrations</p>
+<p>These layers together form the operational structure of the platform.</p>
+<h3 id="s-4-2-1">User Layer</h3>
+<p>The User Layer represents the entry point through which users interact with the Multiplus platform. It provides interfaces that allow users to view financial insights, manage investments, and interact with financial services offered by the platform.</p>
+<p>This layer typically includes:</p>
+<ul>
+<li>web applications</li>
+<li>mobile applications</li>
+<li>financial dashboards</li>
+<li>portfolio visualization interfaces</li>
+<li>recommendation display interfaces</li>
+<li>The primary responsibilities of the user layer include:</li>
+<li>presenting financial insights and recommendations</li>
+<li>collecting user financial preferences</li>
+<li>enabling investment actions through platform services</li>
+<li>managing user consent for financial data access</li>
+<li>displaying portfolio and financial performance information</li>
+<li>The user layer communicates with backend services through secure APIs.</li>
+<li>A simplified interaction model is shown below:</li>
+<li>User</li>
+<li>↓</li>
+<li>Web / Mobile Interface</li>
+<li>↓</li>
+<li>Platform API Services</li>
+</ul>
+<p>The user interface does not directly interact with AI models or raw financial datasets. All analytical operations occur within deeper layers of the platform architecture.</p>
+<h3 id="s-4-2-2">Platform Layer</h3>
+<p>The Platform Layer functions as the operational backbone of the Multiplus system. It coordinates system workflows, manages application logic, and exposes service interfaces that connect user applications with the intelligence and data infrastructure layers.</p>
+<p>This layer typically consists of backend services implemented as modular microservices or service components.</p>
+<p>Core responsibilities of the platform layer include:</p>
+<ul>
+<li>user authentication and authorization</li>
+<li>user account and profile management</li>
+<li>financial product catalog management</li>
+<li>API orchestration</li>
+<li>integration with external financial providers</li>
+<li>delivery of recommendations and insights</li>
+<li>orchestration of AI intelligence workflows</li>
+<li>Typical services within the platform layer may include:</li>
+<li>authentication services</li>
+<li>user profile services</li>
+<li>portfolio management services</li>
+<li>recommendation delivery services</li>
+<li>financial product catalog services</li>
+<li>API gateway and routing systems</li>
+<li>A simplified representation of the platform layer architecture is shown below:</li>
+<li>User Interface</li>
+<li>↓</li>
+<li>API Gateway</li>
+<li>↓</li>
+<li>Backend Platform Services</li>
+<li>↓</li>
+<li>AI Intelligence Platform</li>
+</ul>
+<p>The platform layer ensures that all interactions with the AI platform and financial data infrastructure occur through controlled service interfaces.</p>
+<h3 id="s-4-2-3">AI Intelligence Layer</h3>
+<p>The AI Intelligence Layer is the analytical core of the Multiplus system. It performs financial data interpretation, portfolio analysis, product evaluation, and recommendation generation.</p>
+<p>This layer transforms structured financial datasets into meaningful insights that can be delivered to users.</p>
+<p>Major components of the AI intelligence layer include:</p>
+<ul>
+<li>financial data interpretation systems</li>
+<li>financial profile construction modules</li>
+<li>portfolio intelligence systems</li>
+<li>risk profiling models</li>
+<li>financial product evaluation engines</li>
+<li>recommendation generation pipelines</li>
+<li>AI agent-based reasoning systems</li>
+</ul>
+<p>These components operate on financial datasets produced by the data infrastructure layer.</p>
+<p>The internal processing pipeline of the AI intelligence layer can be conceptualized as follows:</p>
+<ul>
+<li>Structured Financial Data</li>
+<li>↓</li>
+<li>Financial Data Interpretation</li>
+<li>↓</li>
+<li>User Financial Profile Construction</li>
+<li>↓</li>
+<li>Portfolio Intelligence</li>
+<li>↓</li>
+<li>Risk Profiling</li>
+<li>↓</li>
+<li>Product Evaluation</li>
+<li>↓</li>
+<li>Recommendation Engine</li>
+<li>↓</li>
+<li>Financial Insights</li>
+</ul>
+<p>The AI intelligence layer is designed to support both deterministic financial models and AI-driven reasoning systems such as large language models operating through agent-based architectures.</p>
+<p>Outputs generated by this layer are delivered to the platform layer for presentation to users.</p>
+<h3 id="s-4-2-4">Data Infrastructure Layer</h3>
+<p>The Data Infrastructure Layer provides the storage, processing, and management capabilities required to support financial data operations within the platform.</p>
+<p>This layer is responsible for collecting financial data from external sources, transforming it into structured datasets, and making it available for analysis by AI systems.</p>
+<p>Key responsibilities of this layer include:</p>
+<ul>
+<li>financial data ingestion</li>
+<li>financial document ingestion</li>
+<li>data cleaning and normalization</li>
+<li>financial feature generation</li>
+<li>time-series data management</li>
+<li>structured data storage</li>
+<li>machine learning feature storage</li>
+<li>The data infrastructure layer may include several specialized data systems, such as:</li>
+<li>data ingestion pipelines</li>
+<li>raw data storage (data lake)</li>
+<li>relational databases for structured financial data</li>
+<li>feature stores for machine learning systems</li>
+<li>vector databases for document intelligence</li>
+<li>The data pipeline architecture can be illustrated as follows:</li>
+<li>External Financial Data</li>
+<li>↓</li>
+<li>Data Ingestion Pipelines</li>
+<li>↓</li>
+<li>Raw Data Storage</li>
+<li>↓</li>
+<li>Data Cleaning and Normalization</li>
+<li>↓</li>
+<li>Structured Financial Databases</li>
+<li>↓</li>
+<li>Feature Store</li>
+<li>↓</li>
+<li>AI Intelligence Layer</li>
+</ul>
+<p>This infrastructure ensures that financial data used by the AI platform is validated, consistent, and organized for efficient analysis.</p>
+<h3 id="s-4-2-5">External Integrations</h3>
+<p>The External Integrations layer represents the external systems and financial data providers that supply information to the Multiplus platform.</p>
+<p>These integrations allow the platform to retrieve financial data required for constructing user financial profiles and performing investment analysis.</p>
+<p>External systems may include:</p>
+<ul>
+<li>banking institutions</li>
+<li>financial data aggregators</li>
+<li>asset management companies</li>
+<li>investment platforms</li>
+<li>market data providers</li>
+<li>financial document uploads from users</li>
+<li>Examples of financial data obtained from these sources include:</li>
+<li>bank account balances</li>
+<li>transaction histories</li>
+<li>investment holdings</li>
+<li>portfolio valuations</li>
+<li>financial product information</li>
+<li>market benchmark indices</li>
+</ul>
+<p>External systems typically communicate with the platform through secure APIs, consent-based data access mechanisms, or document ingestion pipelines.</p>
+<p>A simplified external integration flow is shown below:</p>
+<pre class="diagram-block">Banks and Financial Institutions
+        ↓
+Secure API Integrations
+        ↓
+Multiplus Data Integration Layer
+        ↓
+Internal Data Pipelines</pre>
+<p>These integrations form the foundation of the platform’s financial data ecosystem.</p>
+<h3 id="s-4-2-6">Layer Interaction Model</h3>
+<p>The interaction between the system layers creates a continuous data and intelligence pipeline.</p>
+<p>The overall interaction model can be summarized as follows:</p>
+<ul>
+<li>External Financial Systems</li>
+<li>↓</li>
+<li>Data Infrastructure Layer</li>
+<li>↓</li>
+<li>AI Intelligence Layer</li>
+<li>↓</li>
+<li>Platform Layer</li>
+<li>↓</li>
+<li>User Layer</li>
+</ul>
+<p>Each layer performs specialized tasks while maintaining clear boundaries between operational services, data processing systems, and intelligence components.</p>
+<p>This layered architecture enables the Multiplus platform to support scalable financial intelligence services while maintaining modular system design.</p>
+    </main>
+    <aside class="toc-panel">
+      <h2 class="toc-title">On this page</h2>
+      <ul id="toc-list" class="toc-list"></ul>
+    </aside>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script src="assets/js/navigation.js"></script>
+  <script src="assets/js/toc.js"></script>
+  <script src="assets/js/search.js"></script>
+  <script src="assets/js/diagram-converter.js"></script>
+  <script>mermaid.initialize({ startOnLoad: false, theme: "dark" });</script>
+</body>
+</html>
