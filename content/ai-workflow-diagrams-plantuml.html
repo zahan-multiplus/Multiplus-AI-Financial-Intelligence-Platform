@@ -1,0 +1,213 @@
+<h1 id="multiplus-ai-platform-ai-workflow-diagrams-plantuml">Multiplus AI Platform — AI Workflow Diagrams (PlantUML)</h1>
+<p><strong>Purpose:</strong> PlantUML sequence diagrams for the main AI feature workflows. Use with PlantUML (CLI, IDE plugin, or server) to generate PNG/SVG.</p>
+<p><strong>Format:</strong> PlantUML sequence diagram syntax. Copy each block to a <code>.puml</code> file or render in a PlantUML-capable viewer.</p>
+<hr />
+<h2 id="1-risk-explanation-workflow">1. Risk Explanation Workflow</h2>
+<pre><code class="language-puml">@startuml Risk Explanation Workflow
+title Risk Explanation Workflow
+
+participant &quot;Client&quot; as Client
+participant &quot;Frontend\n(Next.js)&quot; as Frontend
+participant &quot;Backend\n(Quarkus)&quot; as Backend
+participant &quot;AI Gateway&quot; as Gateway
+participant &quot;AI Orchestrator&quot; as Orchestrator
+participant &quot;Inference Router&quot; as Router
+participant &quot;LLM Inference\nServer&quot; as LLM
+
+Client -&gt; Frontend: Request risk explanation
+Frontend -&gt; Backend: GET/POST explain risk (userId)
+
+Backend -&gt; Backend: Load FinancialProfile\n(riskScore, riskBand, components)
+Backend -&gt; Gateway: POST /ai/explain-risk-score\n(AIRequest, contextObject)
+
+Gateway -&gt; Orchestrator: Route explain_risk_score
+Orchestrator -&gt; Orchestrator: Build prompt from context
+Orchestrator -&gt; Router: POST /v1/completion\n(prompt, modelId)
+
+Router -&gt; LLM: Completion request
+LLM -&gt; LLM: Generate explanation text
+LLM --&gt; Router: Explanation (text)
+
+Router --&gt; Orchestrator: Response
+Orchestrator --&gt; Gateway: AIResponse (result.explanation)
+Gateway --&gt; Backend: AIResponse
+
+Backend --&gt; Frontend: API response (explanation)
+Frontend --&gt; Client: Display risk explanation
+
+@enduml
+</code></pre>
+<hr />
+<h2 id="2-allocation-reasoning-workflow">2. Allocation Reasoning Workflow</h2>
+<p>Allocation is computed by the platform; AI only explains it.</p>
+<pre><code class="language-puml">@startuml Allocation Reasoning Workflow
+title Allocation Reasoning Workflow\n(Platform computes allocation; AI explains)
+
+participant &quot;Client&quot; as Client
+participant &quot;Frontend&quot; as Frontend
+participant &quot;Backend&quot; as Backend
+participant &quot;AssetAllocation\nService&quot; as Allocation
+participant &quot;AI Gateway&quot; as Gateway
+participant &quot;Recommendation\nReasoning Engine&quot; as Reasoning
+participant &quot;Inference Router&quot; as Router
+participant &quot;LLM Inference\nServer&quot; as LLM
+
+Client -&gt; Frontend: Request allocation + &quot;Why these funds?&quot;
+Frontend -&gt; Backend: Get allocation with explanation (userId)
+
+Backend -&gt; Allocation: getAllocation(userId)
+activate Allocation
+Allocation -&gt; Allocation: Load UserRiskScore,\nRiskAssetAllocationConfig
+Allocation -&gt; Allocation: Compute allocation +\nmatching funds (deterministic)
+Allocation --&gt; Backend: allocation, recommendedFunds
+deactivate Allocation
+
+Backend -&gt; Backend: Build context\n(FinancialProfile + Recommendation)
+Backend -&gt; Gateway: POST /ai/recommendation-reasoning\n(AIRequest, contextObject)
+
+Gateway -&gt; Reasoning: Route recommendation_reasoning
+Reasoning -&gt; Reasoning: Build prompt\n(allocation, funds, profile)
+Reasoning -&gt; Router: POST /v1/completion (prompt, modelId)
+
+Router -&gt; LLM: Completion request
+LLM -&gt; LLM: Generate reasoning text
+LLM --&gt; Router: Reasoning (text)
+
+Router --&gt; Reasoning: Response
+Reasoning --&gt; Gateway: AIResponse (result.reasoning)
+Gateway --&gt; Backend: AIResponse
+
+Backend -&gt; Backend: Attach reasoning to allocation response
+Backend --&gt; Frontend: allocation + funds + reasoning
+Frontend --&gt; Client: Display allocation and explanation
+
+@enduml
+</code></pre>
+<hr />
+<h2 id="3-document-extraction-workflow">3. Document Extraction Workflow</h2>
+<pre><code class="language-puml">@startuml Document Extraction Workflow
+title Document Extraction Workflow
+
+participant &quot;Client&quot; as Client
+participant &quot;Frontend&quot; as Frontend
+participant &quot;Backend&quot; as Backend
+participant &quot;AI Gateway&quot; as Gateway
+participant &quot;Document\nIntelligence Service&quot; as DocIntel
+participant &quot;Inference Router&quot; as Router
+participant &quot;OCR Service&quot; as OCR
+participant &quot;Document Extraction\nService&quot; as Extract
+
+Client -&gt; Frontend: Request extract document (documentId)
+Frontend -&gt; Backend: POST extract document\n(documentId, documentType)
+
+Backend -&gt; Backend: Resolve storageKey\n(e.g. S3) for documentId
+Backend -&gt; Gateway: POST /ai/extract-document\n(AIRequest: documentId, documentType, storageKey)
+
+Gateway -&gt; DocIntel: Route extract_document
+
+DocIntel -&gt; Router: POST /v1/ocr (document ref / bytes)
+Router -&gt; OCR: Forward
+OCR -&gt; OCR: Run OCR on document
+OCR --&gt; Router: Text + layout
+Router --&gt; DocIntel: OCR result
+
+DocIntel -&gt; Router: POST /v1/extract\n(documentType, text, layout)
+Router -&gt; Extract: Forward
+Extract -&gt; Extract: Extract entities\n(holdings, transactions)
+Extract --&gt; Router: Entities + confidence
+Router --&gt; DocIntel: Extraction result
+
+DocIntel --&gt; Gateway: AIResponse (entities, confidence)
+Gateway --&gt; Backend: AIResponse
+
+Backend -&gt; Backend: Store extracted entities
+Backend --&gt; Frontend: Structured extraction result
+Frontend --&gt; Client: Display extracted data
+
+@enduml
+</code></pre>
+<hr />
+<h2 id="4-portfolio-insight-workflow">4. Portfolio Insight Workflow</h2>
+<pre><code class="language-puml">@startuml Portfolio Insight Workflow
+title Portfolio Insight Workflow
+
+participant &quot;Client&quot; as Client
+participant &quot;Frontend&quot; as Frontend
+participant &quot;Backend&quot; as Backend
+participant &quot;Portfolio\nService&quot; as Portfolio
+participant &quot;AI Gateway&quot; as Gateway
+participant &quot;Financial Insight\nEngine&quot; as Insight
+participant &quot;Inference Router&quot; as Router
+participant &quot;LLM Inference\nServer&quot; as LLM
+
+Client -&gt; Frontend: Request portfolio insight
+Frontend -&gt; Backend: GET portfolio insight (userId)
+
+Backend -&gt; Portfolio: getPortfolio(userId)
+Portfolio --&gt; Backend: Portfolio (holdings, allocation, value)
+Backend -&gt; Backend: Load FinancialProfile
+Backend -&gt; Backend: Build context\n(FinancialProfile + Portfolio)
+
+Backend -&gt; Gateway: POST /ai/generate-insight\n(AIRequest, contextObject)
+
+Gateway -&gt; Insight: Route generate_financial_insight
+Insight -&gt; Insight: Build prompt (profile + portfolio)
+Insight -&gt; Router: POST /v1/completion (prompt, modelId)
+
+Router -&gt; LLM: Completion request
+LLM -&gt; LLM: Generate insight narrative
+LLM --&gt; Router: Insight (text)
+
+Router --&gt; Insight: Response
+Insight --&gt; Gateway: AIResponse (result.insight)
+Gateway --&gt; Backend: AIResponse
+
+Backend --&gt; Frontend: API response (insight)
+Frontend --&gt; Client: Display portfolio insight
+
+@enduml
+</code></pre>
+<hr />
+<h2 id="5-trigger-engine-workflow">5. Trigger Engine Workflow</h2>
+<p>Example event: <strong>RiskScoreComputed</strong>. Backend publishes; Trigger Engine consumes, runs AI workflow, stores result.</p>
+<pre><code class="language-puml">@startuml Trigger Engine Workflow
+title Trigger Engine Workflow (e.g. RiskScoreComputed)
+
+participant &quot;Backend\n(Quarkus)&quot; as Backend
+participant &quot;Event Bus\n/ Queue&quot; as Bus
+participant &quot;Trigger\nEngine&quot; as Trigger
+participant &quot;AI Gateway&quot; as Gateway
+participant &quot;AI Service\n(e.g. Orchestrator)&quot; as Service
+participant &quot;Inference\nRouter&quot; as Router
+participant &quot;Model\nServer&quot; as Model
+
+Backend -&gt; Backend: UserRiskOrchestrationService\npersists UserRiskScore
+Backend -&gt; Bus: Publish TriggerEvent\n(RiskScoreComputed, userId,\nriskScore, riskBand, payload)
+
+Trigger -&gt; Bus: Consume event
+Trigger -&gt; Trigger: Deduplicate\n(eventType, entityId)
+Trigger -&gt; Trigger: Build AIRequest\n(explain_risk_score, contextObject)
+
+Trigger -&gt; Gateway: POST /ai/explain-risk-score\n(AIRequest)
+Gateway -&gt; Service: Route to Orchestrator
+Service -&gt; Service: Build prompt from context
+Service -&gt; Router: Completion request
+Router -&gt; Model: Forward
+Model -&gt; Model: Generate explanation
+Model --&gt; Router: Explanation (text)
+Router --&gt; Service: Response
+Service --&gt; Gateway: AIResponse (result.explanation)
+Gateway --&gt; Trigger: AIResponse
+
+Trigger -&gt; Trigger: Store result\n(e.g. explanation cache by userId)
+Trigger -&gt; Bus: Ack message
+
+note right of Trigger
+  Later: user requests &quot;Explain risk&quot;
+  → Backend reads from cache
+end note
+
+@enduml
+</code></pre>
+<hr />
+<p><em>Workflow diagrams only. PlantUML syntax. No other files modified. Render with PlantUML to produce PNG/SVG.</em></p>

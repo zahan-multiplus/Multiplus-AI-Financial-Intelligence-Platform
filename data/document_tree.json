@@ -9895,6 +9895,31 @@
           ]
         }
       ]
+    },
+    {
+      "name": "PART 19 — REFERENCE",
+      "id": "19",
+      "part": 19,
+      "page": "platform-ai-data-schemas.html",
+      "children": [
+        { "name": "Platform AI Data Schemas", "id": "19.1", "anchor": "multiplus-platform-ai-integration-data-schemas", "page": "platform-ai-data-schemas.html" },
+        { "name": "AI Gateway API Contract", "id": "19.2", "anchor": "ai-gateway-api-contract", "page": "ai-gateway-api-contract.html" },
+        { "name": "AI Trigger Event Model", "id": "19.3", "anchor": "ai-trigger-event-model-and-trigger-engine", "page": "ai-trigger-event-model.html" },
+        { "name": "AI Model Strategy", "id": "19.4", "anchor": "multiplus-ai-platform-model-strategy", "page": "ai-model-strategy.html" },
+        { "name": "AI Integration Architecture", "id": "19.5", "anchor": "multiplus-ai-integration-architecture", "page": "ai-integration-architecture.html" },
+        { "name": "AI Architecture Diagrams", "id": "19.6", "anchor": "multiplus-ai-platform-core-architecture-diagrams", "page": "ai-architecture-diagrams.html" },
+        { "name": "AI Model Serving Architecture", "id": "19.7", "anchor": "multiplus-ai-platform-model-serving-architecture", "page": "ai-model-serving-architecture.html" },
+        { "name": "AI Model Lifecycle", "id": "19.8", "anchor": "multiplus-ai-platform-model-lifecycle-management", "page": "ai-model-lifecycle.html" },
+        { "name": "Architecture Boundaries", "id": "19.9", "anchor": "multiplus-ai-platform-architecture-boundary-definitions", "page": "architecture-boundaries.html" },
+        { "name": "Architecture Implementation Mapping", "id": "19.10", "anchor": "multiplus-ai-architecture-documentation-vs-implementation-mapping", "page": "architecture-implementation-mapping.html" },
+        { "name": "Architecture Review", "id": "19.11", "anchor": "multiplus-ai-financial-intelligence-platform-technical-architecture-review", "page": "architecture-review.html" },
+        { "name": "AI Integration Reuse Matrix", "id": "19.12", "anchor": "multiplus-ai-integration-plan-reuse-matrix", "page": "ai-integration-reuse-matrix.html" },
+        { "name": "AI Infrastructure Diagrams (PlantUML)", "id": "19.13", "anchor": "multiplus-ai-platform-infrastructure-architecture-diagrams-plantuml", "page": "ai-infrastructure-diagrams-plantuml.html" },
+        { "name": "AI Workflow Diagrams", "id": "19.14", "anchor": "multiplus-ai-platform-ai-workflow-diagrams", "page": "ai-workflow-diagrams.html" },
+        { "name": "AI Workflow Diagrams (PlantUML)", "id": "19.15", "anchor": "multiplus-ai-platform-ai-workflow-diagrams-plantuml", "page": "ai-workflow-diagrams-plantuml.html" },
+        { "name": "Documentation Diagram Audit", "id": "19.16", "anchor": "documentation-consistency-audit-sequence-diagram-gap-analysis", "page": "documentation-diagram-audit.html" },
+        { "name": "Platform Architecture Intelligence", "id": "19.17", "anchor": "multiplus-platform-technical-architecture-intelligence", "page": "platform-architecture-intelligence.html" }
+      ]
     }
   ]
 }

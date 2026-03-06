@@ -1,0 +1,855 @@
+<h1 id="documentation-consistency-audit-sequence-diagram-gap-analysis">Documentation Consistency Audit — Sequence Diagram Gap Analysis</h1>
+<p><strong>Multiplus AI Financial Intelligence Platform</strong><br />
+<strong>Scope:</strong> Process descriptions that represent system workflows and should be represented as sequence diagrams but currently exist only as text.</p>
+<p><strong>Existing diagrams (reference):</strong><br />
+AI Platform Flow, AI Data Flow, Risk Explanation Flow, Portfolio Recommendation Flow, Document OCR Flow, End-to-End System Flow, User Interaction Flow, Data Ingestion Pipeline, AI Intelligence Processing, Agent Reasoning Workflow, Trigger Processing, Recommendation Generation, System Monitoring.</p>
+<hr />
+<h2 id="audit-list">Audit List</h2>
+<table>
+<thead>
+<tr>
+<th>Section Name</th>
+<th>Workflow Description</th>
+<th>Diagram Status</th>
+<th>Recommended Diagram Name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Document Intelligence — Financial Document Processing</strong></td>
+<td>Document Processing Workflow (Upload → Preprocessing → Text Extraction → Data Parsing → Structured Data Generation)</td>
+<td>Missing</td>
+<td>document-processing-sequence</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — Financial Document Processing</strong></td>
+<td>Document Ingestion (User Upload → Document Storage → Document Processing Pipeline)</td>
+<td>Missing</td>
+<td>document-ingestion-sequence</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — CAS Document Parsing</strong></td>
+<td>CAS Parsing Workflow (CAS Upload → Preprocessing → Text Extraction → Table Detection → Investment Data Parsing → Portfolio Dataset)</td>
+<td>Missing</td>
+<td>cas-parsing-sequence</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — CAS Document Parsing</strong></td>
+<td>Extracted Document Text → Scheme Name extraction workflow</td>
+<td>Missing</td>
+<td>scheme-extraction-sequence</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — CAS Document Parsing</strong></td>
+<td>Transaction History → Holdings extraction workflow</td>
+<td>Missing</td>
+<td>cas-holdings-extraction-sequence</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — CAS Document Parsing</strong></td>
+<td>Validated CAS Data → Integration with Portfolio Analysis</td>
+<td>Missing</td>
+<td>cas-validation-portfolio-sequence</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — Bank Statement Analysis</strong></td>
+<td>Bank Statement Processing Workflow (Upload → Preprocessing → Extraction → Classification → Insights)</td>
+<td>Missing</td>
+<td>bank-statement-processing-sequence</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — Bank Statement Analysis</strong></td>
+<td>Transaction extraction and classification workflow</td>
+<td>Missing</td>
+<td>bank-statement-transaction-sequence</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — Bank Statement Analysis</strong></td>
+<td>Cash flow / savings rate estimation workflow</td>
+<td>Missing</td>
+<td>bank-statement-cashflow-sequence</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — Insurance Document Processing</strong></td>
+<td>Insurance Document Processing Workflow (Upload → Preprocessing → Extraction → Validation → Integration)</td>
+<td>Missing</td>
+<td>insurance-document-processing-sequence</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — Insurance Document Processing</strong></td>
+<td>Validated Insurance Data → Integration with Financial Profiles</td>
+<td>Missing</td>
+<td>insurance-validation-profile-sequence</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — OCR Pipeline</strong></td>
+<td>OCR Pipeline Workflow (Document Upload → Image Preprocessing → OCR → Structured output) — <em>Phase 1 end-to-end has diagram</em></td>
+<td>Exists (Phase 1)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — OCR Pipeline</strong></td>
+<td>Text Regions → OCR Text → Table Region detection (internal OCR stages)</td>
+<td>Missing</td>
+<td>ocr-internal-stages-sequence</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — Document Entity Extraction</strong></td>
+<td>Entity Extraction Workflow (OCR Output → Preprocessing → Entity Detection → Classification → Structured Entity Storage)</td>
+<td>Missing</td>
+<td>entity-extraction-sequence</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — Structured Data Conversion</strong></td>
+<td>Conversion Workflow (Extracted Data → Entity Mapping → Normalization → Transaction/Holding/Policy conversion → Storage)</td>
+<td>Missing</td>
+<td>structured-data-conversion-sequence</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence — Graph Construction</strong></td>
+<td>Graph Construction Workflow (Extracted Entities → Graph construction → Query workflow)</td>
+<td>Missing</td>
+<td>document-graph-construction-sequence</td>
+</tr>
+<tr>
+<td><strong>AI Platform — Data-Driven Intelligence</strong></td>
+<td>Data-Driven Intelligence Workflow (financial data → interpretation → profile → portfolio → risk → recommendation)</td>
+<td>Exists</td>
+<td>AI Intelligence Processing covers high-level flow</td>
+</tr>
+<tr>
+<td><strong>AI Platform — Platform Integration</strong></td>
+<td>Frontend → Backend → AI Module → Model Server flow</td>
+<td>Exists</td>
+<td>AI Platform Flow</td>
+</tr>
+<tr>
+<td><strong>AI Platform — Financial Data Interpretation</strong></td>
+<td>Financial data interpretation workflow (text description)</td>
+<td>Exists</td>
+<td>AI Intelligence Processing</td>
+</tr>
+<tr>
+<td><strong>AI Platform — Profile Construction</strong></td>
+<td>Simplified profile construction (Financial Documents → Aggregation → Profile)</td>
+<td>Missing</td>
+<td>profile-construction-sequence</td>
+</tr>
+<tr>
+<td><strong>AI Platform — Product Evaluation</strong></td>
+<td>Product evaluation workflow</td>
+<td>Missing</td>
+<td>product-evaluation-sequence</td>
+</tr>
+<tr>
+<td><strong>AI Platform — Data Extraction</strong></td>
+<td>Full data extraction workflow (raw inputs → processing stages → structured datasets)</td>
+<td>Missing</td>
+<td>data-extraction-workflow-sequence</td>
+</tr>
+<tr>
+<td><strong>AI Platform — Data Enrichment</strong></td>
+<td>Data enrichment workflow</td>
+<td>Missing</td>
+<td>data-enrichment-sequence</td>
+</tr>
+<tr>
+<td><strong>AI Platform — Data Ingestion</strong></td>
+<td>Data ingestion workflow</td>
+<td>Exists</td>
+<td>Data Ingestion Pipeline (high-level); batch/stream details missing</td>
+</tr>
+<tr>
+<td><strong>AI Platform — Data Management</strong></td>
+<td>Data management workflow (lifecycle, access)</td>
+<td>Missing</td>
+<td>data-management-sequence</td>
+</tr>
+<tr>
+<td><strong>AI Platform — Document Processing</strong></td>
+<td>Document processing workflow within AI platform</td>
+<td>Missing</td>
+<td>ai-platform-document-processing-sequence</td>
+</tr>
+<tr>
+<td><strong>System Architecture</strong></td>
+<td>Overall architecture / layer model (text arrow diagram)</td>
+<td>Exists</td>
+<td>End-to-End System Flow; Layer Interaction Model text-only</td>
+</tr>
+<tr>
+<td><strong>System Architecture</strong></td>
+<td>End-to-end workflow (data ingestion → analysis → insight generation)</td>
+<td>Exists</td>
+<td>End-to-End System Flow</td>
+</tr>
+<tr>
+<td><strong>System Architecture</strong></td>
+<td>Financial data flow (External Providers → Pipelines → Platform)</td>
+<td>Exists</td>
+<td>Data Ingestion Pipeline; Financial Data Flow text-only</td>
+</tr>
+<tr>
+<td><strong>System Architecture</strong></td>
+<td>Internal intelligence workflow (data → features → models → insights)</td>
+<td>Exists</td>
+<td>AI Intelligence Processing</td>
+</tr>
+<tr>
+<td><strong>System Architecture</strong></td>
+<td>External integration flow (Banks/Institutions → APIs → Platform)</td>
+<td>Missing</td>
+<td>external-integration-sequence</td>
+</tr>
+<tr>
+<td><strong>System Architecture</strong></td>
+<td>Layer interaction model (continuous data and intelligence pipeline)</td>
+<td>Missing</td>
+<td>layer-interaction-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine — Product Universe</strong></td>
+<td>Product Universe Construction Workflow (Raw Product Data → stages → Product Universe)</td>
+<td>Missing</td>
+<td>product-universe-construction-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine</strong></td>
+<td>Product classification / architecture workflows</td>
+<td>Missing</td>
+<td>product-classification-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine</strong></td>
+<td>Risk profile integration workflow (User Profile → Risk Profile → Recommendation)</td>
+<td>Missing</td>
+<td>risk-profile-integration-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine — Portfolio Analysis</strong></td>
+<td>Portfolio Analysis Workflow (Portfolio Data → Analysis → Results)</td>
+<td>Missing</td>
+<td>portfolio-analysis-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine</strong></td>
+<td>Allocation comparison (Current vs Target) workflow</td>
+<td>Missing</td>
+<td>allocation-comparison-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine — Investment Allocation</strong></td>
+<td>Investment Allocation Generation workflow</td>
+<td>Missing</td>
+<td>investment-allocation-generation-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine</strong></td>
+<td>Integration with Product Selection (Allocation Plan → Product Selection)</td>
+<td>Missing</td>
+<td>allocation-product-selection-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine — Fund Ranking</strong></td>
+<td>Fund Ranking Workflow (Product Universe → Ranking → Selection)</td>
+<td>Missing</td>
+<td>fund-ranking-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine</strong></td>
+<td>Normalization / composite score workflow</td>
+<td>Missing</td>
+<td>fund-ranking-normalization-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine</strong></td>
+<td>Diversification analysis and integration with asset allocation</td>
+<td>Missing</td>
+<td>diversification-allocation-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine — Optimization</strong></td>
+<td>Optimization Workflow (Current Portfolio → Optimization → Allocation gap → Capital allocation)</td>
+<td>Missing</td>
+<td>optimization-workflow-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine</strong></td>
+<td>Portfolio Risk Evaluation (Optimized Portfolio → Risk Evaluation)</td>
+<td>Missing</td>
+<td>portfolio-risk-evaluation-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine — Recommendation Generation</strong></td>
+<td>Recommendation Generation Workflow (Profile → Allocation → Filtering → Selection → Suitability)</td>
+<td>Exists</td>
+<td>Recommendation Generation</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine — Suitability</strong></td>
+<td>Suitability Validation Workflow (Recommendation → Suitability checks → Output)</td>
+<td>Missing</td>
+<td>suitability-validation-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine — Explanation</strong></td>
+<td>Explanation Generation Workflow (Recommendation Results → Explanation)</td>
+<td>Missing</td>
+<td>explanation-generation-sequence</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine</strong></td>
+<td>Integration with AI Language Models (Structured data → LLM → Natural language)</td>
+<td>Exists</td>
+<td>Portfolio Recommendation Flow (Phase 1) covers explanation</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine</strong></td>
+<td>Continuous Learning Pipeline (User Feedback → Model update)</td>
+<td>Missing</td>
+<td>continuous-learning-pipeline-sequence</td>
+</tr>
+<tr>
+<td><strong>Triggers — Trigger Framework</strong></td>
+<td>Event Sources → Trigger Detection → Deduplication → Dispatcher → AI Modules</td>
+<td>Exists</td>
+<td>Trigger Processing</td>
+</tr>
+<tr>
+<td><strong>Triggers</strong></td>
+<td>Platform Event → Trigger Detection → Trigger Activation (detailed)</td>
+<td>Missing</td>
+<td>trigger-activation-sequence</td>
+</tr>
+<tr>
+<td><strong>Triggers</strong></td>
+<td>AI Workflow Dispatcher (Trigger Event → Dispatcher → AI Process)</td>
+<td>Missing</td>
+<td>workflow-dispatcher-sequence</td>
+</tr>
+<tr>
+<td><strong>Triggers</strong></td>
+<td>Deduplication (Incoming Triggers → Deduplication → Processed events)</td>
+<td>Missing</td>
+<td>trigger-deduplication-sequence</td>
+</tr>
+<tr>
+<td><strong>Triggers</strong></td>
+<td>Trigger failure handling (Triggered Workflow → Failure → Recovery)</td>
+<td>Missing</td>
+<td>trigger-failure-handling-sequence</td>
+</tr>
+<tr>
+<td><strong>Triggers — User Triggered</strong></td>
+<td>User Recommendation Request → Profile → Portfolio → Recommendation Engine → Output</td>
+<td>Exists</td>
+<td>Recommendation Generation</td>
+</tr>
+<tr>
+<td><strong>Triggers — User Triggered</strong></td>
+<td>User Profile Update → Financial Profile Reconstruction</td>
+<td>Missing</td>
+<td>profile-update-trigger-sequence</td>
+</tr>
+<tr>
+<td><strong>Triggers — User Triggered</strong></td>
+<td>Document Upload → Document Processing Pipeline → Extracted Data</td>
+<td>Exists</td>
+<td>Document OCR Flow</td>
+</tr>
+<tr>
+<td><strong>Triggers — User Triggered</strong></td>
+<td>User Portfolio Analysis Request → Portfolio Data → Analysis Engine → Insights</td>
+<td>Missing</td>
+<td>portfolio-analysis-request-sequence</td>
+</tr>
+<tr>
+<td><strong>Triggers — User Triggered</strong></td>
+<td>User Financial Goal → Goal Planning Engine → Investment Strategy</td>
+<td>Missing</td>
+<td>goal-planning-trigger-sequence</td>
+</tr>
+<tr>
+<td><strong>Triggers — User Triggered</strong></td>
+<td>Real-time insight (User Action → Trigger → AI Analysis → Response)</td>
+<td>Missing</td>
+<td>real-time-insight-sequence</td>
+</tr>
+<tr>
+<td><strong>Triggers — User Triggered</strong></td>
+<td>Trigger validation (User Trigger Event → Validation → Approved Execution)</td>
+<td>Missing</td>
+<td>trigger-validation-sequence</td>
+</tr>
+<tr>
+<td><strong>Triggers — Data Driven</strong></td>
+<td>New Transaction Data → Transaction Analysis Engine → Behavioral signals</td>
+<td>Missing</td>
+<td>transaction-trigger-sequence</td>
+</tr>
+<tr>
+<td><strong>Triggers — Data Driven</strong></td>
+<td>Portfolio Data Update → Portfolio Analysis Engine → Portfolio insights</td>
+<td>Missing</td>
+<td>portfolio-update-trigger-sequence</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>Suitability / regulatory principle (Investor Profile → Suitability Assessment)</td>
+<td>Missing</td>
+<td>suitability-assessment-sequence</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>Investor profile → Risk profiling → Suitability workflow</td>
+<td>Missing</td>
+<td>compliance-risk-profiling-sequence</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>Recommendation output → Explanation generation</td>
+<td>Exists</td>
+<td>Explanation covered in Portfolio Recommendation Flow</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>Data protection (User Data → Encryption → Storage)</td>
+<td>Missing</td>
+<td>data-protection-sequence</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>Recommendation Engine → Risk Monitoring System</td>
+<td>Missing</td>
+<td>compliance-risk-monitoring-sequence</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>Suitability Validation Workflow (Recommendation → Suitability → Output)</td>
+<td>Missing</td>
+<td>compliance-suitability-sequence</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>Risk Alignment Evaluation (Recommendation → Portfolio Risk → Risk Alignment Validation)</td>
+<td>Missing</td>
+<td>risk-alignment-evaluation-sequence</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>Stress scenario / portfolio risk + new investment evaluation</td>
+<td>Missing</td>
+<td>stress-scenario-sequence</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>Rule violation → Portfolio adjustment workflow</td>
+<td>Missing</td>
+<td>rule-violation-adjustment-sequence</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>Recommendation Engine → Compliance Engine → Approved Recommendations</td>
+<td>Missing</td>
+<td>compliance-engine-sequence</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>Rule evaluation (Generated Recommendation → Rule Engine → Result)</td>
+<td>Missing</td>
+<td>rule-evaluation-sequence</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>Audit logging (Platform Services → Audit Logging System → Storage)</td>
+<td>Missing</td>
+<td>audit-logging-sequence</td>
+</tr>
+<tr>
+<td><strong>Compliance</strong></td>
+<td>Explainability (Portfolio results → Explanation generation)</td>
+<td>Missing</td>
+<td>explainability-sequence</td>
+</tr>
+<tr>
+<td><strong>Data Architecture</strong></td>
+<td>Financial data ecosystem (Providers → Integration → Data Infrastructure)</td>
+<td>Exists</td>
+<td>Data Ingestion Pipeline</td>
+</tr>
+<tr>
+<td><strong>Data Architecture</strong></td>
+<td>Internal data generation pipeline (External → Extraction/Enrichment → Processing → Internal sources)</td>
+<td>Missing</td>
+<td>internal-data-pipeline-sequence</td>
+</tr>
+<tr>
+<td><strong>Data Architecture</strong></td>
+<td>Batch ingestion workflow (Scheduled source → Batch retrieval → Validation → Transformation → Storage)</td>
+<td>Missing</td>
+<td>batch-ingestion-sequence</td>
+</tr>
+<tr>
+<td><strong>Data Architecture</strong></td>
+<td>Streaming ingestion (Real-time events → Streaming pipeline → Event processing → Storage)</td>
+<td>Missing</td>
+<td>streaming-ingestion-sequence</td>
+</tr>
+<tr>
+<td><strong>Data Architecture</strong></td>
+<td>Document ingestion (Document Upload → Ingestion pipeline → Secure storage)</td>
+<td>Missing</td>
+<td>data-arch-document-ingestion-sequence</td>
+</tr>
+<tr>
+<td><strong>Data Architecture</strong></td>
+<td>Data ingestion workflow (Sources → Connectors → Validation → Transformation → Orchestration → Storage)</td>
+<td>Exists</td>
+<td>Data Ingestion Pipeline (summary)</td>
+</tr>
+<tr>
+<td><strong>Data Architecture</strong></td>
+<td>Data validation and quality (Sources → Ingestion → Validation → Transformation → Storage)</td>
+<td>Missing</td>
+<td>data-validation-quality-sequence</td>
+</tr>
+<tr>
+<td><strong>Data Architecture</strong></td>
+<td>Storage architecture (Ingestion → Raw → Processed → Feature store → Vector DB)</td>
+<td>Missing</td>
+<td>storage-architecture-sequence</td>
+</tr>
+<tr>
+<td><strong>Data Architecture</strong></td>
+<td>Document storage (Upload → Object storage → Document processing)</td>
+<td>Missing</td>
+<td>document-storage-sequence</td>
+</tr>
+<tr>
+<td><strong>Data Architecture</strong></td>
+<td>Feature generation workflow (Raw data → Processing → Enrichment → Feature generation)</td>
+<td>Missing</td>
+<td>feature-generation-sequence</td>
+</tr>
+<tr>
+<td><strong>Financial Data Processing</strong></td>
+<td>Financial profile construction (Transaction/Portfolio/Documents → Aggregation → Behavioral signals → Profile)</td>
+<td>Missing</td>
+<td>financial-profile-construction-sequence</td>
+</tr>
+<tr>
+<td><strong>Financial Data Processing</strong></td>
+<td>Portfolio data processing (Holdings → Aggregation → Classification → Allocation → Metrics)</td>
+<td>Missing</td>
+<td>portfolio-data-processing-sequence</td>
+</tr>
+<tr>
+<td><strong>Financial Data Processing</strong></td>
+<td>Transaction processing (Raw → Normalization → Merchant → Categorization → Recurring → Aggregation)</td>
+<td>Missing</td>
+<td>transaction-processing-sequence</td>
+</tr>
+<tr>
+<td><strong>Financial Data Processing</strong></td>
+<td>Transaction categorization (Raw → Normalization → Merchant → Description parsing → Category)</td>
+<td>Missing</td>
+<td>transaction-categorization-sequence</td>
+</tr>
+<tr>
+<td><strong>Financial Data Processing</strong></td>
+<td>Income detection (Transaction data → Categorization → Credit filter → Recurring → Income source → Estimation)</td>
+<td>Missing</td>
+<td>income-detection-sequence</td>
+</tr>
+<tr>
+<td><strong>Financial Data Processing</strong></td>
+<td>Expense detection (Transaction data → Categorization → Debit filter → Recurring expense → Aggregation)</td>
+<td>Missing</td>
+<td>expense-detection-sequence</td>
+</tr>
+<tr>
+<td><strong>Financial Data Processing</strong></td>
+<td>Behavioral analysis (Transaction/Portfolio → Activity aggregation → Pattern detection → Feature generation)</td>
+<td>Missing</td>
+<td>behavioral-analysis-sequence</td>
+</tr>
+<tr>
+<td><strong>Financial Data Processing</strong></td>
+<td>Asset detection (Documents/Holdings → Asset identification → Classification → Valuation)</td>
+<td>Missing</td>
+<td>asset-detection-sequence</td>
+</tr>
+<tr>
+<td><strong>Financial Data Processing</strong></td>
+<td>Financial health indicator (Profile/Portfolio/Behavioral → Aggregation → Indicator computation)</td>
+<td>Missing</td>
+<td>financial-health-indicator-sequence</td>
+</tr>
+<tr>
+<td><strong>Model Strategy</strong></td>
+<td>Model capability / data flow (Data → Feature engineering → Models → Outputs)</td>
+<td>Missing</td>
+<td>model-capability-flow-sequence</td>
+</tr>
+<tr>
+<td><strong>Model Strategy</strong></td>
+<td>Embedding workflow (Financial text → Embedding model → Vector embeddings)</td>
+<td>Missing</td>
+<td>embedding-workflow-sequence</td>
+</tr>
+<tr>
+<td><strong>Model Strategy</strong></td>
+<td>Analytical models + LLM interaction (Structured analysis → Signals → LLM)</td>
+<td>Missing</td>
+<td>analytical-llm-interaction-sequence</td>
+</tr>
+<tr>
+<td><strong>Model Strategy</strong></td>
+<td>RAG-style flow (User query → Embedding → Vector DB → Context → LLM)</td>
+<td>Missing</td>
+<td>rag-retrieval-sequence</td>
+</tr>
+<tr>
+<td><strong>Model Strategy</strong></td>
+<td>Agent → Context Builder → Retrieval → LLM deployment</td>
+<td>Exists</td>
+<td>Agent Reasoning Workflow</td>
+</tr>
+<tr>
+<td><strong>Model Strategy</strong></td>
+<td>Evaluation pipeline (Training data → Model training → Validation → Evaluation → Metrics)</td>
+<td>Missing</td>
+<td>model-evaluation-pipeline-sequence</td>
+</tr>
+<tr>
+<td><strong>Model Strategy</strong></td>
+<td>Model serving (Platform request → Serving API → Inference → Output)</td>
+<td>Missing</td>
+<td>model-serving-sequence</td>
+</tr>
+<tr>
+<td><strong>Model Strategy</strong></td>
+<td>Batch workflow (Data ingestion → Feature generation → Batch model execution)</td>
+<td>Missing</td>
+<td>batch-model-workflow-sequence</td>
+</tr>
+<tr>
+<td><strong>Model Strategy</strong></td>
+<td>Inference workflow (User request → Feature retrieval → Model inference → Output)</td>
+<td>Missing</td>
+<td>inference-workflow-sequence</td>
+</tr>
+<tr>
+<td><strong>Agent Architecture</strong></td>
+<td>Agent multi-step workflow (User query → Agent → Data retrieval → Model execution → Insight)</td>
+<td>Exists</td>
+<td>Agent Reasoning Workflow</td>
+</tr>
+<tr>
+<td><strong>Agent Architecture</strong></td>
+<td>Request interpretation (User request → Intent identification → Task definition)</td>
+<td>Missing</td>
+<td>request-interpretation-sequence</td>
+</tr>
+<tr>
+<td><strong>Agent Architecture</strong></td>
+<td>Context retrieval (Agent → Context Builder → Data sources)</td>
+<td>Missing</td>
+<td>context-retrieval-sequence</td>
+</tr>
+<tr>
+<td><strong>Agent Architecture</strong></td>
+<td>Tool invocation (Agent → Tool layer → Tool execution)</td>
+<td>Missing</td>
+<td>tool-invocation-sequence</td>
+</tr>
+<tr>
+<td><strong>Agent Architecture</strong></td>
+<td>Multi-step orchestration (Query → Retrieve profile → Analyze portfolio → Retrieve products → Recommendation)</td>
+<td>Missing</td>
+<td>agent-multistep-orchestration-sequence</td>
+</tr>
+<tr>
+<td><strong>Agent Architecture</strong></td>
+<td>Output synthesis (Analysis results → Context preparation → LLM → Response)</td>
+<td>Missing</td>
+<td>output-synthesis-sequence</td>
+</tr>
+<tr>
+<td><strong>Agent Architecture</strong></td>
+<td>Tool selection and invocation (Query → Agent → Tool selection → Invocation → Output)</td>
+<td>Missing</td>
+<td>tool-selection-invocation-sequence</td>
+</tr>
+<tr>
+<td><strong>Agent Architecture</strong></td>
+<td>Context construction (Task → Identify context types → Retrieve → Filter/normalize → Structured context)</td>
+<td>Missing</td>
+<td>context-construction-sequence</td>
+</tr>
+<tr>
+<td><strong>Monitoring</strong></td>
+<td>Metrics collection flow (Platform/AI → Metrics collection → Monitoring → Alerting)</td>
+<td>Exists</td>
+<td>System Monitoring</td>
+</tr>
+<tr>
+<td><strong>Monitoring</strong></td>
+<td>AI workflow monitoring (workflow execution metrics)</td>
+<td>Missing</td>
+<td>ai-workflow-monitoring-sequence</td>
+</tr>
+<tr>
+<td><strong>Monitoring</strong></td>
+<td>Data pipeline monitoring (Pipeline → Monitoring → Alerts)</td>
+<td>Missing</td>
+<td>data-pipeline-monitoring-sequence</td>
+</tr>
+<tr>
+<td><strong>Monitoring</strong></td>
+<td>Model performance (Predictions → Metrics → Performance decline detection)</td>
+<td>Missing</td>
+<td>model-performance-monitoring-sequence</td>
+</tr>
+<tr>
+<td><strong>Monitoring</strong></td>
+<td>Recommendation performance analysis (Market benchmark → Performance data → Analysis)</td>
+<td>Missing</td>
+<td>recommendation-performance-analysis-sequence</td>
+</tr>
+<tr>
+<td><strong>Monitoring</strong></td>
+<td>Pipeline execution monitoring</td>
+<td>Missing</td>
+<td>pipeline-execution-monitoring-sequence</td>
+</tr>
+<tr>
+<td><strong>Monitoring</strong></td>
+<td>Feedback loop (Portfolio outcomes → Feedback → Insights)</td>
+<td>Missing</td>
+<td>feedback-loop-sequence</td>
+</tr>
+<tr>
+<td><strong>Monitoring</strong></td>
+<td>Model retraining (Updated dataset → Training → Validation → Deployment)</td>
+<td>Missing</td>
+<td>model-retraining-sequence</td>
+</tr>
+<tr>
+<td><strong>Infrastructure</strong></td>
+<td>Infrastructure layer (Compute → GPU → Storage → Data pipelines)</td>
+<td>Missing</td>
+<td>infrastructure-layer-sequence</td>
+</tr>
+<tr>
+<td><strong>Infrastructure</strong></td>
+<td>Compute architecture (Application / Data / AI layers)</td>
+<td>Missing</td>
+<td>compute-architecture-sequence</td>
+</tr>
+<tr>
+<td><strong>Infrastructure</strong></td>
+<td>GPU workflow (Model request → GPU allocation → Inference)</td>
+<td>Missing</td>
+<td>gpu-inference-sequence</td>
+</tr>
+<tr>
+<td><strong>Infrastructure</strong></td>
+<td>Networking (Components → Network → Communication)</td>
+<td>Missing</td>
+<td>networking-architecture-sequence</td>
+</tr>
+<tr>
+<td><strong>Security</strong></td>
+<td>Security layers / data protection workflows (multiple text flows)</td>
+<td>Missing</td>
+<td>security-data-protection-sequence</td>
+</tr>
+<tr>
+<td><strong>Security</strong></td>
+<td>Authentication / authorization workflows</td>
+<td>Missing</td>
+<td>authentication-authorization-sequence</td>
+</tr>
+<tr>
+<td><strong>Security</strong></td>
+<td>Secure deployment pipeline (Build → Validation → Deployment)</td>
+<td>Missing</td>
+<td>secure-deployment-sequence</td>
+</tr>
+<tr>
+<td><strong>Security</strong></td>
+<td>Document processing security</td>
+<td>Missing</td>
+<td>document-security-sequence</td>
+</tr>
+<tr>
+<td><strong>Future Extensions — Autonomous Agents</strong></td>
+<td>Agent operational model (Data sources → Agent → Monitoring/Decisions)</td>
+<td>Missing</td>
+<td>autonomous-agent-operational-sequence</td>
+</tr>
+<tr>
+<td><strong>Future Extensions</strong></td>
+<td>Agent insight generation / notification workflows</td>
+<td>Missing</td>
+<td>agent-insight-notification-sequence</td>
+</tr>
+<tr>
+<td><strong>Future Extensions</strong></td>
+<td>Agent safety controls workflow</td>
+<td>Missing</td>
+<td>agent-safety-controls-sequence</td>
+</tr>
+<tr>
+<td><strong>Future Extensions — AI Portfolio Managers</strong></td>
+<td>Portfolio monitoring / composition / risk / performance workflows</td>
+<td>Missing</td>
+<td>ai-portfolio-manager-sequence</td>
+</tr>
+<tr>
+<td><strong>Future Extensions</strong></td>
+<td>Rebalancing (Allocation drift → Rebalancing recommendation → Engine)</td>
+<td>Missing</td>
+<td>rebalancing-recommendation-sequence</td>
+</tr>
+<tr>
+<td><strong>Future Extensions — Predictive Market</strong></td>
+<td>Market data processing / predictive modeling / time-series workflows</td>
+<td>Missing</td>
+<td>predictive-market-sequence</td>
+</tr>
+<tr>
+<td><strong>Future Extensions</strong></td>
+<td>Automated portfolio rebalancing (Allocation monitoring → Drift → Rebalancing)</td>
+<td>Missing</td>
+<td>automated-rebalancing-sequence</td>
+</tr>
+<tr>
+<td><strong>Future Extensions — Personalized Planning</strong></td>
+<td>Financial planning (Profile → Goals → Timeline → Cash flow → Strategy)</td>
+<td>Missing</td>
+<td>financial-planning-sequence</td>
+</tr>
+<tr>
+<td><strong>Future Extensions — Multi Agent</strong></td>
+<td>Agent communication / orchestration / task execution</td>
+<td>Flag for clarification</td>
+<td>multi-agent-orchestration-sequence</td>
+</tr>
+<tr>
+<td><strong>Future Extensions — RL Portfolio</strong></td>
+<td>Reinforcement learning training / environment / reward workflow</td>
+<td>Missing</td>
+<td>rl-portfolio-sequence</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="summary">Summary</h2>
+<ul>
+<li><strong>Exists:</strong> Workflow is already represented by an existing diagram (in Architecture Diagrams or in-section figure).</li>
+<li><strong>Missing:</strong> Workflow is described in text/arrow form only; a sequence (or flow) diagram is recommended.</li>
+<li><strong>Flag for clarification:</strong> Workflow description is ambiguous or high-level; clarify scope before adding a diagram.</li>
+</ul>
+<p><strong>Total missing or clarification:</strong> 100+ distinct workflow descriptions identified as candidates for sequence or flow diagrams. Prioritization recommendation: start with Document Intelligence (CAS, Bank, Insurance, Entity, Conversion), Recommendation Engine (Product Universe, Portfolio Analysis, Fund Ranking, Suitability, Explanation), Triggers (user/data-driven trigger flows), Compliance (suitability, risk alignment, audit), Financial Data Processing (profile, portfolio, transaction, income/expense, behavioral), and Data Architecture (batch/streaming ingestion, storage, feature generation).</p>

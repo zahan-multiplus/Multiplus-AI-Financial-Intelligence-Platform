@@ -1,0 +1,132 @@
+<h1 id="multiplus-ai-architecture-documentation-vs-implementation-mapping">Multiplus AI Architecture — Documentation vs Implementation Mapping</h1>
+<p><strong>Purpose:</strong> Map documented AI platform architecture components to the current Multiplus platform implementation. No design or architecture changes are proposed.</p>
+<p><strong>Implementation source:</strong> <code>C:\Users\Zenith\Documents\dev\multiplus\docs\PLATFORM_ARCHITECTURE_INTELLIGENCE.md</code><br />
+<strong>Documentation source:</strong> Multiplus AI architecture documentation (content/, ARCHITECTURE_BOUNDARIES.md, ARCHITECTURE_REVIEW.md).</p>
+<hr />
+<h2 id="mapping-table">Mapping Table</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Status</th>
+<th>Existing Implementation</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>User Risk Scoring</strong></td>
+<td>Implemented</td>
+<td>UserRiskCalculatorService, RiskScoringConfigService, RiskVariableDerivationService, UserRiskOrchestrationService</td>
+<td>Credit-report-based; eight components (credit score, income, DTI, utilization, repayment, loan mix, age, city tier) with configurable weights from application_config; score 1–1000 and risk bucket (Secure/Conservative/Moderate/Growth/Aggressive). Formulas in backend/docs/USER-RISK-SCORE-FORMULAS.md.</td>
+</tr>
+<tr>
+<td><strong>Risk Profile Questionnaire</strong></td>
+<td>Implemented</td>
+<td>ManualAssessmentService, RiskAnalysisEngineService, RiskScoreBand, PdfReportService; entities: RiskProfile, RiskQuestion, RiskQuestionOption, ManualAssessmentSession, SessionQuestion, SessionAnswer, FriendlySummary</td>
+<td>Category scores from session answers → composite score (1–1000) → band/subBand → behavioral insights and recommended actions; DOCX/PDF risk report generation. REST under /api/v1/riskprofile (ManualAssessmentResource, AdminResource, AdminQuestionResource).</td>
+</tr>
+<tr>
+<td><strong>Asset Allocation Engine</strong></td>
+<td>Implemented</td>
+<td>AssetAllocationService, RiskAssetAllocationConfig</td>
+<td>Loads UserRiskScore and RiskAssetAllocationConfig; validates allocation sums; maps allocation columns to scheme categories; finds matching funds by comparing fund_risk_score to user score with Strong/Acceptable gap thresholds from config. GET /api/v1/user-risk/allocation returns allocation bands and matching funds.</td>
+</tr>
+<tr>
+<td><strong>Portfolio Evaluation Logic</strong></td>
+<td>Partially Implemented</td>
+<td>PortfolioController (/api/v1/portfolio/me, /me/list)</td>
+<td>API and permission gating exist; actual portfolio retrieval is marked TODO/pending in implementation. No portfolio aggregation, diversification, or performance metrics pipeline as in documentation.</td>
+</tr>
+<tr>
+<td><strong>Fund Scoring Logic</strong></td>
+<td>Implemented</td>
+<td>FundMetricsNormalizationService, FundMetricsNormalizedWriterService, FundMetricsNormalizedEntity</td>
+<td>Normalizes fund_nav_metrics (volatility, max_drawdown, downside_deviation, etc.); computes fund risk score (e.g. 0.40×Vol + 0.35×Drawdown + 0.25×DownsideDev), scale 1–1000; persists to fund_metrics_normalized. Part of NAV pipeline.</td>
+</tr>
+<tr>
+<td><strong>Recommendation Engine</strong></td>
+<td>Partially Implemented</td>
+<td>AssetAllocationService (allocation + “matching funds” by risk score gap only)</td>
+<td>No separate recommendation engine or ML pipeline. Matching funds by Strong/Acceptable gap only; no product ranking, suitability checks, optimization, or recommendation object pipeline. Historical recommendation columns removed (migration 054).</td>
+</tr>
+<tr>
+<td><strong>Document Intelligence</strong></td>
+<td>Partially Implemented</td>
+<td>DocumentUploadController, DocumentUploadService, AwsS3Service; CreditReportProcessingService (PDFBox), CreditReportMongoRepository</td>
+<td>Upload, validation, storage (local/S3), type mapping (PAN, Aadhaar, bank book, etc.). Credit report PDF: decode → PDFTextStripper → parse to structured JSON → MongoDB. No OCR for generic docs, no CAS/bank statement/insurance parsing, no entity extraction or document knowledge graph.</td>
+</tr>
+<tr>
+<td><strong>Data Ingestion Pipelines</strong></td>
+<td>Partially Implemented</td>
+<td>NavIngestionService, MfApiClient → MongoDB navs; NavMongoToMysqlMigrationService, NavMysqlWriterService; NavMetricsCalculationService, NavMetricsWriterService; FundMetricsNormalizationService, FundMetricsNormalizedWriterService; NavDailyRunScheduler, NavPipelineProgressService. Credit: Kyckart → CreditReportService → parse → MongoDB credit_reports</td>
+<td>NAV: MFAPI → MongoDB → MySQL → metrics → normalization on schedule. Credit report ingestion and storage. No general-purpose batch/streaming/event-driven ingestion framework; no feature store or vector DB ingestion.</td>
+</tr>
+<tr>
+<td><strong>External Financial Integrations</strong></td>
+<td>Partially Implemented</td>
+<td>MfApiClient (MFAPI: fund list, NAV); CreditReportService + Kyckart (credit report, PAN/bank/UPI verify)</td>
+<td>MFAPI and Kyckart only. No broad financial data aggregation or multiple bank/investment-platform connectors as described in documentation.</td>
+</tr>
+<tr>
+<td><strong>Trigger Framework</strong></td>
+<td>Not Implemented</td>
+<td>Quarkus Scheduler (e.g. NavDailyRunScheduler); RiskScoreComputedEvent (fired on new score)</td>
+<td>No trigger detection layer, deduplication, or AI workflow dispatcher. Scheduled jobs and single domain event only; no event-driven trigger routing to AI workflows.</td>
+</tr>
+<tr>
+<td><strong>AI Platform Modules</strong></td>
+<td>Partially Implemented</td>
+<td>Backend services: UserRiskCalculatorService, AssetAllocationService, RiskAnalysisEngineService, FundMetricsNormalizationService, CreditReportProcessingService, etc.</td>
+<td>Analytical logic exists as backend services. No dedicated “AI platform” layer or module abstraction; no AI module orchestration as in doc. AiRiskAnalysisResource (/api/v1/riskprofile/ai) deprecated (410); no active AI model pipeline.</td>
+</tr>
+<tr>
+<td><strong>Model Serving Infrastructure</strong></td>
+<td>Not Implemented</td>
+<td>—</td>
+<td>No ML/AI runtime in pom.xml; no vLLM, Ollama, or model server. All current analytics are rule-based and formula-based.</td>
+</tr>
+<tr>
+<td><strong>Agent Architecture</strong></td>
+<td>Not Implemented</td>
+<td>—</td>
+<td>No agent, context builder, tool invocation layer, or LLM-based orchestration.</td>
+</tr>
+<tr>
+<td><strong>Monitoring / Model Lifecycle</strong></td>
+<td>Partially Implemented</td>
+<td>HealthController (/api/health)</td>
+<td>Basic health endpoint only. No model monitoring, model versioning/registry, retraining pipeline, A/B testing, or recommendation performance tracking as in documentation.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="summary-by-status">Summary by Status</h2>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Count</th>
+<th>Components</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Implemented</strong></td>
+<td>4</td>
+<td>User Risk Scoring, Risk Profile Questionnaire, Asset Allocation Engine, Fund Scoring Logic</td>
+</tr>
+<tr>
+<td><strong>Partially Implemented</strong></td>
+<td>7</td>
+<td>Portfolio Evaluation Logic, Recommendation Engine, Document Intelligence, Data Ingestion Pipelines, External Financial Integrations, AI Platform Modules, Monitoring / Model Lifecycle</td>
+</tr>
+<tr>
+<td><strong>Not Implemented</strong></td>
+<td>3</td>
+<td>Trigger Framework, Model Serving Infrastructure, Agent Architecture</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>This mapping is based solely on the implementation described in PLATFORM_ARCHITECTURE_INTELLIGENCE.md and the documented AI architecture. No architecture changes or recommendations are made.</em></p>

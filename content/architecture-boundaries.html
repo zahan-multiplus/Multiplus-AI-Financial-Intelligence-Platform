@@ -1,0 +1,369 @@
+<h1 id="multiplus-ai-platform-architecture-boundary-definitions">Multiplus AI Platform — Architecture Boundary Definitions</h1>
+<p><strong>Purpose:</strong> Define clear subsystem boundaries so that each component has well-defined responsibilities and no overlapping ownership.<br />
+<strong>Reference:</strong> Technical architecture review (<code>ARCHITECTURE_REVIEW.md</code>) and documentation under <code>content/</code>.</p>
+<hr />
+<h2 id="1-core-platform-backend">1. Core Platform Backend</h2>
+<p><strong>Subsystem:</strong> Core Platform Backend (Platform Layer / Quarkus Backend)</p>
+<p><strong>Responsibilities:</strong><br />
+- Expose and orchestrate APIs for user-facing applications (web, mobile)<br />
+- Authenticate and authorize users<br />
+- Manage user accounts and non-analytical profile data (e.g. preferences, consent)<br />
+- Manage financial product catalog (metadata, availability) and investment transaction processing<br />
+- Route user requests to the appropriate downstream subsystems (AI Platform, Data Platform, etc.)<br />
+- Deliver approved recommendations and insights to the user interface<br />
+- Integrate with external financial providers for non-analytical operations (e.g. account linking, transaction submission)<br />
+- Enforce rate limits and request-level quotas for API consumers</p>
+<p><strong>Inputs:</strong><br />
+- HTTP/API requests from the user layer (frontend)<br />
+- Responses from AI Platform (profiles, risk scores, recommendations, explanations)<br />
+- Responses from Compliance Engine (approval/rejection of recommendations)<br />
+- Data from Data Platform (for read-through to UI, e.g. portfolio snapshot)<br />
+- External provider API responses (for account/transaction operations)</p>
+<p><strong>Outputs:</strong><br />
+- API responses to the user layer (recommendations, insights, portfolio data, product catalog)<br />
+- Invocations to AI Platform (e.g. “generate recommendation”, “generate explanation”)<br />
+- Invocations to Trigger Framework (e.g. user action events)<br />
+- Invocations to Data Platform (e.g. document upload notification, read requests)<br />
+- Audit events for user actions and API usage</p>
+<p><strong>Dependencies:</strong><br />
+- AI Platform (for analytical outputs)<br />
+- Compliance Engine (for recommendation approval before delivery)<br />
+- Data Platform (for persisted data read-through and document/event notifications)<br />
+- Trigger Framework (to emit user-driven events)<br />
+- External financial providers (for account and transaction operations)</p>
+<p><strong>Explicitly does NOT:</strong><br />
+- Run AI/ML inference or host model serving<br />
+- Execute data ingestion pipelines or define storage schemas<br />
+- Perform suitability or compliance validation of recommendations<br />
+- Detect triggers or dispatch workflows (that is Trigger Framework)<br />
+- Build financial profiles, risk scores, or recommendation logic (that is AI Platform / Recommendation Engine)</p>
+<hr />
+<h2 id="2-ai-platform">2. AI Platform</h2>
+<p><strong>Subsystem:</strong> AI Platform (AI Intelligence Layer — analytical modules)</p>
+<p><strong>Responsibilities:</strong><br />
+- Interpret raw or structured financial data into analytical inputs (e.g. transaction categorization, income/expense detection)<br />
+- Construct and maintain user financial profiles from transactions, portfolio, and documents<br />
+- Generate portfolio intelligence (aggregation, allocation analysis, diversification, concentration risk)<br />
+- Compute risk profiles and risk scores for users<br />
+- Evaluate financial products (ranking, scoring) for use by the Recommendation Engine<br />
+- Run document intelligence pipelines (OCR, entity extraction, structured data conversion) and expose extracted data to the Data Platform for storage<br />
+- Generate natural-language explanations (risk score, portfolio recommendation) by calling Model Serving with context prepared by the backend<br />
+- Coordinate with the Recommendation Engine to produce recommendation outputs (allocation, product selection) and with Compliance Engine only indirectly (recommendations are validated by Compliance after generation)</p>
+<p><strong>Inputs:</strong><br />
+- Structured financial data from Data Platform (feature store, processed storage, vector DB as needed)<br />
+- Requests from Core Platform Backend (e.g. “generate recommendation for user X”, “explain risk score for user Y”)<br />
+- Trigger events from Trigger Framework (e.g. “profile update”, “portfolio analysis”) that result in invocations to AI workflows<br />
+- Document binaries or references from Data Platform (for document intelligence)</p>
+<p><strong>Outputs:</strong><br />
+- User financial profiles and risk scores (to Data Platform for storage and to Recommendation Engine for use)<br />
+- Portfolio analysis results (to Recommendation Engine and to backend for display)<br />
+- Recommendation outputs (allocation + product set) to Compliance Engine (via backend or direct contract)<br />
+- Natural-language explanations (to Core Platform Backend for delivery to user)<br />
+- Extracted structured data from documents (to Data Platform for storage and downstream use)</p>
+<p><strong>Dependencies:</strong><br />
+- Data Platform (read/write of features, profiles, portfolio data, document storage, vector DB for RAG when applicable)<br />
+- Recommendation Engine (invoked to generate recommendations; receives product rankings and analytical inputs)<br />
+- Model Serving Infrastructure (LLM and other model inference for explanations and future RAG/agents)<br />
+- Trigger Framework (receives dispatched workflow events; does not perform trigger detection)</p>
+<p><strong>Explicitly does NOT:</strong><br />
+- Ingest data from external sources or operate ingestion pipelines (Data Platform)<br />
+- Validate recommendations against regulatory rules (Compliance Engine)<br />
+- Detect or deduplicate trigger events (Trigger Framework)<br />
+- Load or serve models (Model Serving Infrastructure)<br />
+- Own product catalog or user account lifecycle (Core Platform Backend)</p>
+<hr />
+<h2 id="3-recommendation-engine">3. Recommendation Engine</h2>
+<p><strong>Subsystem:</strong> Recommendation Engine</p>
+<p><strong>Responsibilities:</strong><br />
+- Define and maintain the product universe and product classification used for recommendations<br />
+- Compute risk-aligned asset allocation targets and allocation gaps<br />
+- Rank financial products (e.g. funds) within categories using defined metrics and scoring<br />
+- Perform diversification and concentration analysis for portfolio construction<br />
+- Run portfolio optimization and generate allocation plans<br />
+- Produce recommendation objects: selected products, allocation distribution, and suitability-related scores<br />
+- Apply <strong>business suitability</strong> checks: risk alignment with user profile, allocation constraints, concentration limits, diversification improvement, liquidity fit, product eligibility (platform policy)<br />
+- Output recommendation payloads for <strong>regulatory validation</strong> by the Compliance Engine (does not perform regulatory compliance itself)</p>
+<p><strong>Inputs:</strong><br />
+- User financial profile and risk profile (from AI Platform / Data Platform)<br />
+- Portfolio data and portfolio analysis results (from AI Platform)<br />
+- Product universe and product metadata (from Data Platform / product catalog)<br />
+- Ranked products and allocation targets (internal to Recommendation Engine pipeline)<br />
+- Configuration for suitability rules (business rules only)</p>
+<p><strong>Outputs:</strong><br />
+- Recommendation objects: list of recommended products, allocation per product, suitability score, supporting metrics<br />
+- These outputs are sent to the Compliance Engine for regulatory validation; only Compliance-approved recommendations are delivered to users by the backend</p>
+<p><strong>Dependencies:</strong><br />
+- Data Platform (product universe, feature store for profile/portfolio inputs)<br />
+- AI Platform (receives profile, risk score, portfolio analysis; invoked by AI Platform or backend to generate recommendations)<br />
+- Compliance Engine (consumes recommendation output; Recommendation Engine does not call Compliance—flow is: Recommendation Engine → Compliance Engine → Backend)</p>
+<p><strong>Explicitly does NOT:</strong><br />
+- Enforce regulatory or legal compliance rules (Compliance Engine)<br />
+- Ingest or store raw financial data (Data Platform)<br />
+- Generate natural-language explanations (AI Platform / explanation modules)<br />
+- Detect triggers or dispatch workflows (Trigger Framework)<br />
+- Serve models or run inference (Model Serving Infrastructure)</p>
+<hr />
+<h2 id="4-compliance-engine">4. Compliance Engine</h2>
+<p><strong>Subsystem:</strong> Compliance Engine</p>
+<p><strong>Responsibilities:</strong><br />
+- Maintain the regulatory and policy rule repository (risk alignment, allocation limits, product eligibility, diversification, reporting rules)<br />
+- Evaluate recommendation outputs (and optionally other platform outputs) against <strong>regulatory</strong> rules only<br />
+- Enforce policy on rule violations (reject, adjust allocation, replace product) and return approved or adjusted recommendations<br />
+- Validate product-level and portfolio-level compliance for regulatory requirements<br />
+- Record compliance decisions and audit logs for regulatory and internal oversight<br />
+- Support regulatory reporting and governance workflows based on audit data</p>
+<p><strong>Inputs:</strong><br />
+- Recommendation objects from the Recommendation Engine (after business suitability has been applied)<br />
+- Rule and policy definitions (regulatory and internal compliance)<br />
+- Optional: user/profile/portfolio context needed to evaluate rules</p>
+<p><strong>Outputs:</strong><br />
+- Approved or adjusted recommendation set for delivery (to Core Platform Backend)<br />
+- Compliance validation results and audit records (to audit logging / reporting)<br />
+- Alerts or flags when violations require manual review</p>
+<p><strong>Dependencies:</strong><br />
+- Recommendation Engine (or the path that carries recommendation output) — Compliance receives recommendations; it does not generate them<br />
+- Core Platform Backend (receives approved recommendations for delivery; may provide context)<br />
+- Audit logging / storage (Data Platform or dedicated audit store)</p>
+<p><strong>Explicitly does NOT:</strong><br />
+- Generate recommendations or compute allocation/ranking (Recommendation Engine)<br />
+- Apply business suitability rules (Recommendation Engine); Compliance applies <strong>regulatory</strong> rules only<br />
+- Ingest or store financial data (Data Platform)<br />
+- Run AI/ML models or explanations (AI Platform / Model Serving)<br />
+- Detect triggers or dispatch workflows (Trigger Framework)</p>
+<hr />
+<h2 id="5-trigger-framework">5. Trigger Framework</h2>
+<p><strong>Subsystem:</strong> Trigger Framework</p>
+<p><strong>Responsibilities:</strong><br />
+- Consume events from defined sources (user actions, data pipeline events, market events, scheduled jobs)<br />
+- Detect whether an event satisfies a trigger condition (trigger detection layer)<br />
+- Deduplicate trigger events (key, time window, and merge policy as defined)<br />
+- Route each validated trigger event to the <strong>appropriate subsystem</strong> that owns the workflow (AI Platform, Recommendation Engine, Data Platform, etc.)<br />
+- Apply priority and scheduling policy for trigger processing<br />
+- Log trigger activations for monitoring and debugging<br />
+- Handle trigger-level failures (retries, dead-letter, alerts) — not the execution failures inside the target workflow</p>
+<p><strong>Inputs:</strong><br />
+- Events from event sources: user interface (via backend), data pipelines, document processing, market feeds, schedulers<br />
+- Trigger configuration (event types, conditions, mapping to workflows, priority)<br />
+- Deduplication configuration (keys, windows)</p>
+<p><strong>Outputs:</strong><br />
+- Dispatched workflow invocations to the correct subsystem (e.g. “run profile update for user X”, “run recommendation for user Y”, “run document processing for document Z”)<br />
+- Trigger logs and metrics (to monitoring/observability)</p>
+<p><strong>Dependencies:</strong><br />
+- Core Platform Backend (for user-driven events)<br />
+- Data Platform (for data-driven and document events; pipeline completion events)<br />
+- AI Platform / Recommendation Engine / etc. (as <strong>consumers</strong> of dispatched invocations; Trigger Framework does not execute the workflow logic)</p>
+<p><strong>Explicitly does NOT:</strong><br />
+- Execute the actual workflows (profile update, recommendation generation, document processing) — those subsystems execute their own logic<br />
+- Ingest or transform financial data (Data Platform)<br />
+- Perform analytical or recommendation logic (AI Platform, Recommendation Engine)<br />
+- Validate recommendations (Compliance Engine)<br />
+- Define business or regulatory rules (Recommendation Engine, Compliance Engine)</p>
+<hr />
+<h2 id="6-data-platform">6. Data Platform</h2>
+<p><strong>Subsystem:</strong> Data Platform (Data Infrastructure Layer)</p>
+<p><strong>Responsibilities:</strong><br />
+- Ingest financial data from external sources (batch, streaming, event-driven) and from internal sources (e.g. document uploads)<br />
+- Validate, clean, normalize, and transform data in pipelines; route to appropriate storage<br />
+- Store raw data (data lake), processed datasets, and derived features (feature store)<br />
+- Store and index embeddings and support vector search (vector database) for RAG and retrieval<br />
+- Provide document storage and lifecycle for uploads and processed outputs<br />
+- Orchestrate pipeline execution (scheduling, event-driven triggers for ingestion)<br />
+- Expose data to AI Platform, Recommendation Engine, and Backend via defined read APIs or data contracts<br />
+- Emit events when data or pipelines change (for Trigger Framework and downstream consumers)</p>
+<p><strong>Inputs:</strong><br />
+- Raw data from external providers (APIs, feeds, files)<br />
+- Document uploads and references from Core Platform Backend<br />
+- Extracted or enriched data from AI Platform (e.g. document extraction results, profile snapshots) for storage<br />
+- Pipeline configuration and scheduling signals</p>
+<p><strong>Outputs:</strong><br />
+- Structured datasets, features, and profile/portfolio data for AI Platform and Recommendation Engine<br />
+- Product universe and market data for Recommendation Engine and backend<br />
+- Document storage and vector index for document intelligence and RAG<br />
+- Pipeline completion and data-change events for Trigger Framework<br />
+- Audit and pipeline metrics for monitoring</p>
+<p><strong>Dependencies:</strong><br />
+- External financial data providers (source of raw data)<br />
+- Core Platform Backend (document uploads, read-through requests)<br />
+- AI Platform (receives extracted/processed data from AI; stores and serves it)<br />
+- Trigger Framework (receives events from Data Platform; Data Platform does not dispatch triggers)</p>
+<p><strong>Explicitly does NOT:</strong><br />
+- Run financial analysis, risk profiling, or recommendation logic (AI Platform, Recommendation Engine)<br />
+- Apply suitability or compliance rules (Recommendation Engine, Compliance Engine)<br />
+- Run AI/ML inference or model serving (Model Serving Infrastructure)<br />
+- Detect triggers or route workflows (Trigger Framework)<br />
+- Authenticate users or manage product catalog (Core Platform Backend)</p>
+<hr />
+<h2 id="7-agent-system">7. Agent System</h2>
+<p><strong>Subsystem:</strong> Agent System (optional orchestration layer — e.g. Phase 3)</p>
+<p><strong>Responsibilities:</strong><br />
+- Interpret user or system requests (intent, task definition)<br />
+- Build context for reasoning (retrieve profile, portfolio, documents, product info via tools)<br />
+- Select and invoke tools (data retrieval, portfolio analysis, product lookup, vector search)<br />
+- Call Model Serving (LLM) with structured context for synthesis and natural-language output<br />
+- Structure and validate LLM output for downstream consumption<br />
+- Manage agent-level memory and conversation context where applicable<br />
+- Apply decision logic (e.g. when to call which tool, when to stop)<br />
+- Handle agent-level failures (retries, fallbacks, timeouts)</p>
+<p><strong>Inputs:</strong><br />
+- User or system requests (from Core Platform Backend or Trigger Framework)<br />
+- Responses from tools (Data Platform, AI Platform services, Recommendation Engine, vector DB)<br />
+- Model Serving responses (LLM completions, embeddings if used by agent)<br />
+- Agent configuration and tool definitions</p>
+<p><strong>Outputs:</strong><br />
+- Structured insights and natural-language responses (to Core Platform Backend)<br />
+- Tool invocation requests to Data Platform, AI Platform, and other subsystems<br />
+- Agent execution logs and metrics</p>
+<p><strong>Dependencies:</strong><br />
+- Data Platform (feature store, vector DB for retrieval)<br />
+- AI Platform (portfolio analysis, risk profile, product evaluation as tools)<br />
+- Recommendation Engine (may invoke to get recommendations as context for explanation)<br />
+- Model Serving Infrastructure (LLM and optionally embedding models)<br />
+- Core Platform Backend or Trigger Framework (request source)</p>
+<p><strong>Explicitly does NOT:</strong><br />
+- Replace the simple “AI module” path used in Phase 1 (explanation generation without full agent)<br />
+- Ingest or run data pipelines (Data Platform)<br />
+- Enforce suitability or compliance (Recommendation Engine, Compliance Engine)<br />
+- Load or serve models (Model Serving Infrastructure)<br />
+- Detect or route triggers (Trigger Framework)</p>
+<hr />
+<h2 id="8-model-serving-infrastructure">8. Model Serving Infrastructure</h2>
+<p><strong>Subsystem:</strong> Model Serving Infrastructure</p>
+<p><strong>Responsibilities:</strong><br />
+- Load and run AI/ML models (LLMs, embedding models, and other models used by the platform)<br />
+- Expose inference APIs (e.g. completion, embedding) to AI Platform and Agent System<br />
+- Manage model versions and runtime configuration (e.g. vLLM, Ollama)<br />
+- Scale and manage GPU/compute resources for inference<br />
+- Apply inference-level security (auth, rate limits at inference layer if delegated)<br />
+- Report inference metrics (latency, throughput, errors) to monitoring</p>
+<p><strong>Inputs:</strong><br />
+- Inference requests from AI Platform or Agent System (prompts, parameters, model id)<br />
+- Model artifacts (weights, config) from model registry or deployment pipeline<br />
+- Configuration for scaling and routing</p>
+<p><strong>Outputs:</strong><br />
+- Model responses (completions, embeddings, classification results) to callers<br />
+- Inference metrics and health status to monitoring</p>
+<p><strong>Dependencies:</strong><br />
+- AI Platform / Agent System (only as callers; Model Serving does not call back into business logic)<br />
+- Model registry or artifact store (for loading models)<br />
+- Infrastructure (compute, GPU, network)</p>
+<p><strong>Explicitly does NOT:</strong><br />
+- Implement business logic, recommendation logic, or suitability (Recommendation Engine, AI Platform)<br />
+- Build context or orchestrate tools (AI Platform, Agent System)<br />
+- Ingest or store application data (Data Platform)<br />
+- Validate recommendations (Compliance Engine)<br />
+- Detect triggers or route workflows (Trigger Framework)</p>
+<hr />
+<h2 id="boundary-summary-table">Boundary Summary Table</h2>
+<table>
+<thead>
+<tr>
+<th>Subsystem</th>
+<th>Owns suitability?</th>
+<th>Owns compliance?</th>
+<th>Runs pipelines?</th>
+<th>Runs inference?</th>
+<th>Dispatches workflows?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Core Platform Backend</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No (emits events)</td>
+</tr>
+<tr>
+<td>AI Platform</td>
+<td>No</td>
+<td>No</td>
+<td>No*</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Recommendation Engine</td>
+<td><strong>Yes (business)</strong></td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Compliance Engine</td>
+<td>No</td>
+<td><strong>Yes (regulatory)</strong></td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Trigger Framework</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td><strong>Yes (routes only)</strong></td>
+</tr>
+<tr>
+<td>Data Platform</td>
+<td>No</td>
+<td>No</td>
+<td><strong>Yes</strong></td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Agent System</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Model Serving</td>
+<td>No</td>
+<td>No</td>
+<td>No</td>
+<td><strong>Yes</strong></td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>* AI Platform runs <em>analytical</em> pipelines (e.g. document intelligence); Data Platform runs <em>data</em> ingestion and storage pipelines.</p>
+<hr />
+<h2 id="resolved-overlaps-from-architecture-review">Resolved Overlaps (from architecture review)</h2>
+<ol>
+<li><strong>Suitability vs compliance</strong>  </li>
+<li><strong>Recommendation Engine</strong> applies <strong>business suitability</strong> (risk alignment, allocation limits, concentration, diversification, liquidity, product eligibility).  </li>
+<li><strong>Compliance Engine</strong> applies <strong>regulatory</strong> rules and policy enforcement only.  </li>
+<li>
+<p>Flow: Recommendation Engine → Compliance Engine → Backend (only approved recommendations are delivered).</p>
+</li>
+<li>
+<p><strong>Data ingestion vs data extraction vs data architecture</strong>  </p>
+</li>
+<li><strong>Data Platform</strong> owns all <strong>ingestion</strong> (batch, streaming, event-driven, document), <strong>storage</strong> (lake, feature store, vector DB), and <strong>pipeline orchestration</strong>.  </li>
+<li><strong>AI Platform</strong> performs <strong>extraction</strong> in the analytical sense: turning raw/unstructured inputs into structured data (e.g. document OCR, entity extraction). Extracted results are <strong>written back to Data Platform</strong> for storage and reuse.  </li>
+<li>
+<p>“Data architecture” is the Data Platform’s design; “data extraction” is an AI Platform capability that consumes and produces data via the Data Platform.</p>
+</li>
+<li>
+<p><strong>AI module vs agent</strong>  </p>
+</li>
+<li><strong>AI Platform</strong> includes non-agent modules (e.g. profile construction, risk scoring, document intelligence, explanation generation in Phase 1).  </li>
+<li><strong>Agent System</strong> is an optional layer (e.g. Phase 3) for multi-step, tool-using orchestration and LLM synthesis.  </li>
+<li>
+<p>Phase 1 can use only AI Platform modules calling Model Serving directly; no agent required.</p>
+</li>
+<li>
+<p><strong>Trigger detection vs workflow execution</strong>  </p>
+</li>
+<li><strong>Trigger Framework</strong> detects events, deduplicates, and <strong>routes</strong> (dispatches) to the subsystem that owns the workflow.  </li>
+<li><strong>Workflow execution</strong> is owned by the target subsystem (e.g. AI Platform runs profile update; Recommendation Engine runs recommendation generation; Data Platform runs ingestion jobs).  </li>
+<li>Trigger Framework does not execute business or analytical logic.</li>
+</ol>
+<hr />
+<p><em>Boundary definitions can be inserted into or linked from the main documentation (e.g. System Architecture or a new “Architecture Boundaries” section) to keep the architectural contract explicit.</em></p>

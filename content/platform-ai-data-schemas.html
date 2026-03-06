@@ -1,0 +1,640 @@
+<h1 id="multiplus-platform-ai-integration-data-schemas">Multiplus Platform — AI Integration Data Schemas</h1>
+<p><strong>Purpose:</strong> Canonical data structures used in requests and responses between the Quarkus backend and the AI Gateway. These schemas form the <strong>contract between the platform and AI systems</strong>.</p>
+<p><strong>Context:</strong> The AI layer does not query backend services directly. The backend sends structured context objects to the AI Gateway. All schemas use JSON; field types and semantics are defined below.</p>
+<hr />
+<h2 id="1-financialprofile">1. FinancialProfile</h2>
+<p><strong>What it represents</strong><br />
+A snapshot of a user’s financial characteristics used for AI reasoning (explanations, insights, recommendation narrative). It is a read-only, aggregated view produced by the platform from risk scoring, questionnaire, and (when available) profile/KYC data.</p>
+<p><strong>How it is generated</strong><br />
+The backend builds it from: <strong>UserRiskCalculatorService</strong> (risk score, band, variables), <strong>RiskAnalysisEngineService</strong> / <strong>ManualAssessmentService</strong> (questionnaire answers and composite score), <strong>RiskAssetAllocationConfig</strong> (allocation bands), and optionally KYC/profile (age, income range). No AI is involved in generation; it is assembled by a backend service (e.g. <code>FinancialProfileAssembler</code> or controller) before calling the AI Gateway.</p>
+<p><strong>Schema (conceptual)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>userId</code></td>
+<td>string</td>
+<td>Platform user identifier.</td>
+</tr>
+<tr>
+<td><code>riskScore</code></td>
+<td>number</td>
+<td>User risk score (e.g. 1–1000) from credit/questionnaire.</td>
+</tr>
+<tr>
+<td><code>riskBand</code></td>
+<td>string</td>
+<td>Risk bucket (e.g. Secure, Conservative, Moderate, Growth, Aggressive).</td>
+</tr>
+<tr>
+<td><code>investmentHorizon</code></td>
+<td>string</td>
+<td>e.g. "short", "medium", "long" or years.</td>
+</tr>
+<tr>
+<td><code>age</code></td>
+<td>number | null</td>
+<td>User age if available from KYC/profile.</td>
+</tr>
+<tr>
+<td><code>incomeRange</code></td>
+<td>string | null</td>
+<td>e.g. "0-5L", "5-10L", "10L+" or band code.</td>
+</tr>
+<tr>
+<td><code>liquidityNeeds</code></td>
+<td>string | null</td>
+<td>e.g. "low", "medium", "high".</td>
+</tr>
+<tr>
+<td><code>taxBracket</code></td>
+<td>string | null</td>
+<td>e.g. "10%", "20%", "30%" or slab.</td>
+</tr>
+<tr>
+<td><code>investmentGoals</code></td>
+<td>string[]</td>
+<td>e.g. ["retirement", "wealth_creation", "child_education"].</td>
+</tr>
+<tr>
+<td><code>questionnaireResults</code></td>
+<td>object</td>
+<td>Summary of questionnaire outcome (e.g. category scores, band, version).</td>
+</tr>
+<tr>
+<td><code>generatedAt</code></td>
+<td>string (ISO 8601)</td>
+<td>When this profile snapshot was built.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>JSON example</strong></p>
+<pre><code class="language-json">{
+  &quot;userId&quot;: &quot;usr_abc123&quot;,
+  &quot;riskScore&quot;: 420,
+  &quot;riskBand&quot;: &quot;Moderate&quot;,
+  &quot;investmentHorizon&quot;: &quot;long&quot;,
+  &quot;age&quot;: 34,
+  &quot;incomeRange&quot;: &quot;10-20L&quot;,
+  &quot;liquidityNeeds&quot;: &quot;medium&quot;,
+  &quot;taxBracket&quot;: &quot;20%&quot;,
+  &quot;investmentGoals&quot;: [&quot;retirement&quot;, &quot;wealth_creation&quot;],
+  &quot;questionnaireResults&quot;: {
+    &quot;version&quot;: &quot;1.0&quot;,
+    &quot;compositeScore&quot;: 420,
+    &quot;band&quot;: &quot;Moderate&quot;,
+    &quot;categoryScores&quot;: { &quot;risk_tolerance&quot;: 65, &quot;time_horizon&quot;: 70 }
+  },
+  &quot;generatedAt&quot;: &quot;2025-03-07T10:30:00Z&quot;
+}
+</code></pre>
+<p><strong>Platform production</strong><br />
+Backend loads <code>UserRiskScore</code>, <code>UserRiskVariables</code>, <code>RiskProfile</code> / <code>ManualAssessmentSession</code>, and optional profile/KYC; maps to the fields above; returns or attaches to an AI request. Single service or controller responsible for building this DTO.</p>
+<hr />
+<h2 id="2-portfolio">2. Portfolio</h2>
+<p><strong>What it represents</strong><br />
+A user’s current investment holdings and high-level metrics: list of holdings, asset allocation breakdown, total value, and optional risk/performance metrics. Used by AI for allocation explanation, insight, or recommendation reasoning.</p>
+<p><strong>How the data originates</strong><br />
+<strong>PortfolioController</strong> / portfolio service (when implemented) returns holdings from platform storage (MySQL/API). <strong>AssetAllocationService</strong> provides allocation bands and matching funds; NAV/valuation may come from <strong>NavIngestionService</strong> / fund data. Backend aggregates holdings, computes or retrieves allocation and value, and optionally attaches fund risk or performance from <strong>FundMetricsNormalizationService</strong> / <code>fund_metrics_normalized</code>. The backend assembles this object; AI only consumes it.</p>
+<p><strong>Schema (conceptual)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>portfolioId</code></td>
+<td>string</td>
+<td>Platform portfolio identifier.</td>
+</tr>
+<tr>
+<td><code>userId</code></td>
+<td>string</td>
+<td>Owner.</td>
+</tr>
+<tr>
+<td><code>holdings</code></td>
+<td>array</td>
+<td>List of positions (scheme id, name, quantity/units, value, allocation %).</td>
+</tr>
+<tr>
+<td><code>assetAllocation</code></td>
+<td>object</td>
+<td>Current allocation by asset class (e.g. equity, debt, hybrid, cash).</td>
+</tr>
+<tr>
+<td><code>currentValue</code></td>
+<td>number</td>
+<td>Total portfolio value (e.g. INR).</td>
+</tr>
+<tr>
+<td><code>riskScore</code></td>
+<td>number | null</td>
+<td>Portfolio-level risk score if computed.</td>
+</tr>
+<tr>
+<td><code>performanceMetrics</code></td>
+<td>object | null</td>
+<td>e.g. return (1Y, 3Y), volatility, drawdown if available.</td>
+</tr>
+<tr>
+<td><code>asOf</code></td>
+<td>string (ISO 8601)</td>
+<td>Valuation / snapshot time.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>JSON example</strong></p>
+<pre><code class="language-json">{
+  &quot;portfolioId&quot;: &quot;port_xyz789&quot;,
+  &quot;userId&quot;: &quot;usr_abc123&quot;,
+  &quot;holdings&quot;: [
+    {
+      &quot;schemeId&quot;: &quot;fund_001&quot;,
+      &quot;schemeName&quot;: &quot;ABC Equity Fund&quot;,
+      &quot;units&quot;: 150.5,
+      &quot;currentValue&quot;: 25000,
+      &quot;allocationPercent&quot;: 45
+    }
+  ],
+  &quot;assetAllocation&quot;: {
+    &quot;equity&quot;: 45,
+    &quot;debt&quot;: 35,
+    &quot;hybrid&quot;: 15,
+    &quot;cash&quot;: 5
+  },
+  &quot;currentValue&quot;: 55000,
+  &quot;riskScore&quot;: 380,
+  &quot;performanceMetrics&quot;: {
+    &quot;return1Y&quot;: 12.5,
+    &quot;return3Y&quot;: 8.2,
+    &quot;volatility&quot;: 14
+  },
+  &quot;asOf&quot;: &quot;2025-03-07T00:00:00Z&quot;
+}
+</code></pre>
+<p><strong>Platform production</strong><br />
+Portfolio service loads holdings from DB; enrichment (NAV, value, allocation %) from fund/NAV data; allocation breakdown and optional risk/metrics from allocation and metrics services. One DTO built per portfolio view requested.</p>
+<hr />
+<h2 id="3-recommendation">3. Recommendation</h2>
+<p><strong>What it represents</strong><br />
+A portfolio recommendation produced by the platform: target allocation, recommended funds, and optional reasoning text. Used to separate <strong>deterministic output</strong> (allocation, fund list) from <strong>AI-generated reasoning</strong>.</p>
+<p><strong>Deterministic vs AI</strong><br />
+- <strong>From platform (deterministic):</strong> <code>recommendationId</code>, <code>userId</code>, <code>allocation</code>, <code>recommendedFunds</code>, <code>generatedAt</code>, and any suitability/constraint metadata. Produced by <strong>AssetAllocationService</strong> (and future recommendation engine): risk-based allocation and matching funds by risk gap.<br />
+- <strong>From AI:</strong> <code>reasoning</code> (natural-language “why these funds / this allocation”). Filled when the backend calls the AI Gateway (e.g. <code>explain_allocation</code>) and attaches the returned text to the recommendation response.</p>
+<p><strong>Schema (conceptual)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recommendationId</code></td>
+<td>string</td>
+<td>Unique id for this recommendation.</td>
+</tr>
+<tr>
+<td><code>userId</code></td>
+<td>string</td>
+<td>User for whom it was generated.</td>
+</tr>
+<tr>
+<td><code>allocation</code></td>
+<td>object</td>
+<td>Target allocation by asset class (same shape as Portfolio.assetAllocation).</td>
+</tr>
+<tr>
+<td><code>recommendedFunds</code></td>
+<td>array</td>
+<td>List of recommended schemes (id, name, category, suggested allocation %, risk score).</td>
+</tr>
+<tr>
+<td><code>reasoning</code></td>
+<td>string | null</td>
+<td>Natural-language explanation (AI-generated when requested).</td>
+</tr>
+<tr>
+<td><code>generatedAt</code></td>
+<td>string (ISO 8601)</td>
+<td>When the recommendation was produced.</td>
+</tr>
+<tr>
+<td><code>metadata</code></td>
+<td>object | null</td>
+<td>e.g. risk band used, gap thresholds, version.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>JSON example</strong></p>
+<pre><code class="language-json">{
+  &quot;recommendationId&quot;: &quot;rec_20250307_usr_abc123&quot;,
+  &quot;userId&quot;: &quot;usr_abc123&quot;,
+  &quot;allocation&quot;: {
+    &quot;equity&quot;: 50,
+    &quot;debt&quot;: 35,
+    &quot;hybrid&quot;: 10,
+    &quot;cash&quot;: 5
+  },
+  &quot;recommendedFunds&quot;: [
+    {
+      &quot;schemeId&quot;: &quot;fund_001&quot;,
+      &quot;schemeName&quot;: &quot;ABC Equity Fund&quot;,
+      &quot;category&quot;: &quot;Equity&quot;,
+      &quot;suggestedAllocationPercent&quot;: 25,
+      &quot;fundRiskScore&quot;: 400
+    }
+  ],
+  &quot;reasoning&quot;: &quot;Your Moderate risk profile supports a 50% equity allocation. The selected funds align with your risk score (420) within an acceptable gap and improve diversification across large-cap and debt.&quot;,
+  &quot;generatedAt&quot;: &quot;2025-03-07T10:35:00Z&quot;,
+  &quot;metadata&quot;: { &quot;riskBand&quot;: &quot;Moderate&quot;, &quot;gapThreshold&quot;: &quot;Acceptable&quot; }
+}
+</code></pre>
+<p><strong>Platform production</strong><br />
+Backend gets allocation and <code>recommendedFunds</code> from <strong>AssetAllocationService</strong>; assigns <code>recommendationId</code> and <code>generatedAt</code>. If the client requested explanation, backend calls AI Gateway with this (or a subset) as context and sets <code>reasoning</code> from the AI response.</p>
+<hr />
+<h2 id="4-triggerevent">4. TriggerEvent</h2>
+<p><strong>What it represents</strong><br />
+An event emitted by the platform (or AI) to drive asynchronous AI workflows: risk explanation pre-generation, document extraction, insight batch, etc. The <strong>Trigger Engine</strong> consumes these and invokes the AI Gateway or internal AI services.</p>
+<p><strong>Schema (conceptual)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>eventType</code></td>
+<td>string</td>
+<td>Canonical event name.</td>
+</tr>
+<tr>
+<td><code>entityType</code></td>
+<td>string</td>
+<td>e.g. "user", "portfolio", "document", "recommendation".</td>
+</tr>
+<tr>
+<td><code>entityId</code></td>
+<td>string</td>
+<td>Id of the primary entity (user id, portfolio id, document id).</td>
+</tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>string (ISO 8601)</td>
+<td>Event time.</td>
+</tr>
+<tr>
+<td><code>payload</code></td>
+<td>object</td>
+<td>Event-specific data (score, document ref, allocation summary, etc.).</td>
+</tr>
+<tr>
+<td><code>correlationId</code></td>
+<td>string | null</td>
+<td>Optional id for tracing.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example event types</strong></p>
+<table>
+<thead>
+<tr>
+<th>eventType</th>
+<th>entityType</th>
+<th>Typical payload contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>RiskScoreComputed</code></td>
+<td>user</td>
+<td><code>userId</code>, <code>riskScore</code>, <code>riskBand</code>, <code>components</code> (optional).</td>
+</tr>
+<tr>
+<td><code>PortfolioCreated</code></td>
+<td>portfolio</td>
+<td><code>portfolioId</code>, <code>userId</code>, initial <code>holdings</code> or summary.</td>
+</tr>
+<tr>
+<td><code>DocumentUploaded</code></td>
+<td>document</td>
+<td><code>documentId</code>, <code>userId</code>, <code>documentType</code>, <code>storageKey</code> or URL.</td>
+</tr>
+<tr>
+<td><code>PortfolioRebalanced</code></td>
+<td>portfolio</td>
+<td><code>portfolioId</code>, <code>userId</code>, new <code>allocation</code>, <code>previousAllocation</code>.</td>
+</tr>
+<tr>
+<td><code>AllocationGenerated</code></td>
+<td>recommendation</td>
+<td><code>userId</code>, <code>recommendationId</code>, allocation summary (for pre-generating reasoning).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>JSON example (RiskScoreComputed)</strong></p>
+<pre><code class="language-json">{
+  &quot;eventType&quot;: &quot;RiskScoreComputed&quot;,
+  &quot;entityType&quot;: &quot;user&quot;,
+  &quot;entityId&quot;: &quot;usr_abc123&quot;,
+  &quot;timestamp&quot;: &quot;2025-03-07T10:30:00Z&quot;,
+  &quot;payload&quot;: {
+    &quot;userId&quot;: &quot;usr_abc123&quot;,
+    &quot;riskScore&quot;: 420,
+    &quot;riskBand&quot;: &quot;Moderate&quot;,
+    &quot;components&quot;: { &quot;credit&quot;: 450, &quot;income&quot;: 400, &quot;dti&quot;: 380 }
+  },
+  &quot;correlationId&quot;: &quot;corr_evt_001&quot;
+}
+</code></pre>
+<p><strong>JSON example (DocumentUploaded)</strong></p>
+<pre><code class="language-json">{
+  &quot;eventType&quot;: &quot;DocumentUploaded&quot;,
+  &quot;entityType&quot;: &quot;document&quot;,
+  &quot;entityId&quot;: &quot;doc_upload_456&quot;,
+  &quot;timestamp&quot;: &quot;2025-03-07T11:00:00Z&quot;,
+  &quot;payload&quot;: {
+    &quot;documentId&quot;: &quot;doc_upload_456&quot;,
+    &quot;userId&quot;: &quot;usr_abc123&quot;,
+    &quot;documentType&quot;: &quot;CAS&quot;,
+    &quot;storageKey&quot;: &quot;s3://bucket/path/doc_upload_456.pdf&quot;
+  },
+  &quot;correlationId&quot;: null
+}
+</code></pre>
+<p><strong>Platform production</strong><br />
+Backend (or domain services) publishes events after state changes: e.g. after <strong>UserRiskOrchestrationService</strong> persists a new score it emits <code>RiskScoreComputed</code>; after <strong>DocumentUploadService</strong> stores a file it emits <code>DocumentUploaded</code>. Events are sent to a message queue or event bus consumed by the Trigger Engine.</p>
+<hr />
+<h2 id="5-airequest">5. AIRequest</h2>
+<p><strong>What it represents</strong><br />
+Generic request envelope sent from the Quarkus backend to the AI Gateway. Identifies the kind of AI operation, the user, a context object (profile, portfolio, recommendation, document ref, etc.), and optional metadata and timeout.</p>
+<p><strong>Schema (conceptual)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>requestId</code></td>
+<td>string</td>
+<td>Unique id for idempotency and tracing.</td>
+</tr>
+<tr>
+<td><code>requestType</code></td>
+<td>string</td>
+<td>One of the canonical request types (see below).</td>
+</tr>
+<tr>
+<td><code>userId</code></td>
+<td>string | null</td>
+<td>User context when applicable.</td>
+</tr>
+<tr>
+<td><code>contextObject</code></td>
+<td>object</td>
+<td>Type-specific payload (e.g. FinancialProfile, Portfolio, Recommendation, or document ref).</td>
+</tr>
+<tr>
+<td><code>metadata</code></td>
+<td>object | null</td>
+<td>e.g. locale, clientId, feature flags.</td>
+</tr>
+<tr>
+<td><code>timeout</code></td>
+<td>number | null</td>
+<td>Max response time in milliseconds (optional; gateway may enforce default).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example request types</strong></p>
+<table>
+<thead>
+<tr>
+<th>requestType</th>
+<th>Typical contextObject</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>explain_risk_score</code></td>
+<td><code>{ "riskScore", "riskBand", "components" }</code> or full FinancialProfile subset.</td>
+</tr>
+<tr>
+<td><code>explain_allocation</code></td>
+<td>Allocation + recommendedFunds + optional FinancialProfile.</td>
+</tr>
+<tr>
+<td><code>extract_document</code></td>
+<td><code>{ "documentId", "storageKey" or "url", "documentType" }</code>.</td>
+</tr>
+<tr>
+<td><code>generate_financial_insight</code></td>
+<td>FinancialProfile and optionally Portfolio or summary.</td>
+</tr>
+<tr>
+<td><code>recommendation_reasoning</code></td>
+<td>Same as explain_allocation (Recommendation or equivalent).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>JSON example (explain_risk_score)</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_ai_001&quot;,
+  &quot;requestType&quot;: &quot;explain_risk_score&quot;,
+  &quot;userId&quot;: &quot;usr_abc123&quot;,
+  &quot;contextObject&quot;: {
+    &quot;riskScore&quot;: 420,
+    &quot;riskBand&quot;: &quot;Moderate&quot;,
+    &quot;components&quot;: { &quot;credit&quot;: 450, &quot;income&quot;: 400, &quot;dti&quot;: 380, &quot;utilization&quot;: 350 }
+  },
+  &quot;metadata&quot;: { &quot;locale&quot;: &quot;en-IN&quot; },
+  &quot;timeout&quot;: 15000
+}
+</code></pre>
+<p><strong>JSON example (extract_document)</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_ai_002&quot;,
+  &quot;requestType&quot;: &quot;extract_document&quot;,
+  &quot;userId&quot;: &quot;usr_abc123&quot;,
+  &quot;contextObject&quot;: {
+    &quot;documentId&quot;: &quot;doc_upload_456&quot;,
+    &quot;storageKey&quot;: &quot;s3://bucket/path/doc_upload_456.pdf&quot;,
+    &quot;documentType&quot;: &quot;CAS&quot;
+  },
+  &quot;metadata&quot;: null,
+  &quot;timeout&quot;: 60000
+}
+</code></pre>
+<p><strong>Platform production</strong><br />
+Backend builds <code>AIRequest</code> in the code path that needs AI (e.g. explanation endpoint, document extraction endpoint). It sets <code>requestId</code> (UUID or similar), <code>requestType</code>, <code>userId</code>, and builds <code>contextObject</code> from <strong>FinancialProfile</strong>, <strong>Portfolio</strong>, <strong>Recommendation</strong>, or document metadata. Then it sends the JSON to the AI Gateway (HTTP POST).</p>
+<hr />
+<h2 id="6-airesponse">6. AIResponse</h2>
+<p><strong>What it represents</strong><br />
+Generic response envelope returned by the AI Gateway to the backend: status, result payload, optional reasoning/model/latency, or error details.</p>
+<p><strong>Schema (conceptual)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>requestId</code></td>
+<td>string</td>
+<td>Echo of the request id.</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>string</td>
+<td>e.g. "success", "partial", "error", "timeout".</td>
+</tr>
+<tr>
+<td><code>result</code></td>
+<td>object | null</td>
+<td>Type-specific result (e.g. <code>{ "explanation": "..." }</code>, <code>{ "entities": [...] }</code>).</td>
+</tr>
+<tr>
+<td><code>reasoning</code></td>
+<td>string | null</td>
+<td>Optional free-form reasoning or model comment.</td>
+</tr>
+<tr>
+<td><code>modelUsed</code></td>
+<td>string | null</td>
+<td>Model identifier (e.g. "llama-3-8b").</td>
+</tr>
+<tr>
+<td><code>latency</code></td>
+<td>number | null</td>
+<td>Response latency in milliseconds.</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td>object | null</td>
+<td>If status is error: <code>{ "code", "message" }</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>JSON example (success — explanation)</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_ai_001&quot;,
+  &quot;status&quot;: &quot;success&quot;,
+  &quot;result&quot;: {
+    &quot;explanation&quot;: &quot;Your risk score of 420 places you in the Moderate band. This reflects a balanced credit profile, with income and DTI contributing positively. Your allocation can include a mix of equity and debt funds aligned with this band.&quot;
+  },
+  &quot;reasoning&quot;: null,
+  &quot;modelUsed&quot;: &quot;llama-3-8b&quot;,
+  &quot;latency&quot;: 1200,
+  &quot;error&quot;: null
+}
+</code></pre>
+<p><strong>JSON example (success — document extraction)</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_ai_002&quot;,
+  &quot;status&quot;: &quot;success&quot;,
+  &quot;result&quot;: {
+    &quot;entities&quot;: {
+      &quot;schemeName&quot;: &quot;ABC Fund&quot;,
+      &quot;holdings&quot;: [
+        { &quot;scheme&quot;: &quot;ABC Fund&quot;, &quot;units&quot;: 100, &quot;value&quot;: 15000 }
+      ],
+      &quot;transactions&quot;: []
+    },
+    &quot;confidence&quot;: 0.92
+  },
+  &quot;reasoning&quot;: null,
+  &quot;modelUsed&quot;: &quot;document-extraction-v1&quot;,
+  &quot;latency&quot;: 3500,
+  &quot;error&quot;: null
+}
+</code></pre>
+<p><strong>JSON example (error)</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_ai_001&quot;,
+  &quot;status&quot;: &quot;error&quot;,
+  &quot;result&quot;: null,
+  &quot;reasoning&quot;: null,
+  &quot;modelUsed&quot;: null,
+  &quot;latency&quot;: 15000,
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;GATEWAY_TIMEOUT&quot;,
+    &quot;message&quot;: &quot;Model serving did not respond within timeout.&quot;
+  }
+}
+</code></pre>
+<p><strong>Platform production</strong><br />
+AI Gateway (and downstream AI services) builds <code>AIResponse</code> after processing: sets <code>requestId</code> from request, <code>status</code>, <code>result</code> (explanation text, extracted entities, insight payload), and optionally <code>modelUsed</code> and <code>latency</code>. On failure, sets <code>status</code> and <code>error</code>. Backend reads <code>status</code> and <code>result</code> (or <code>error</code>) and either attaches the result to the API response or handles the error (e.g. no explanation, retry, or user message).</p>
+<hr />
+<h2 id="summary">Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Schema</th>
+<th>Producer</th>
+<th>Consumer</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>FinancialProfile</strong></td>
+<td>Backend (from UserRisk, Questionnaire, profile)</td>
+<td>AI Gateway / AI services</td>
+<td>Context for risk explanation, insight, reasoning.</td>
+</tr>
+<tr>
+<td><strong>Portfolio</strong></td>
+<td>Backend (portfolio + allocation + metrics)</td>
+<td>AI Gateway / AI services</td>
+<td>Context for allocation explanation, insight.</td>
+</tr>
+<tr>
+<td><strong>Recommendation</strong></td>
+<td>Backend (AssetAllocationService) + AI (reasoning)</td>
+<td>AI Gateway (context) / Client (response)</td>
+<td>Deterministic recommendation + optional AI reasoning.</td>
+</tr>
+<tr>
+<td><strong>TriggerEvent</strong></td>
+<td>Backend (event publisher)</td>
+<td>Trigger Engine</td>
+<td>Drive async AI workflows.</td>
+</tr>
+<tr>
+<td><strong>AIRequest</strong></td>
+<td>Backend</td>
+<td>AI Gateway</td>
+<td>Canonical request envelope.</td>
+</tr>
+<tr>
+<td><strong>AIResponse</strong></td>
+<td>AI Gateway</td>
+<td>Backend</td>
+<td>Canonical response envelope.</td>
+</tr>
+</tbody>
+</table>
+<p>All of these are documentation definitions only; no implementation files are modified. Implementations (Java DTOs, OpenAPI, or JSON Schema) can be derived from this document.</p>

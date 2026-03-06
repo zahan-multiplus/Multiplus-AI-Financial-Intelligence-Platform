@@ -1,0 +1,240 @@
+<h1 id="multiplus-ai-platform-model-strategy">Multiplus AI Platform — Model Strategy</h1>
+<p><strong>Purpose:</strong> Define which model categories power each AI capability, how models interact with AI services, selection criteria, and how the architecture supports model replacement, multi-model orchestration, A/B testing, and upgrades without changing the Quarkus backend.</p>
+<p><strong>Context:</strong> Architecture is Quarkus Backend → AI Gateway → AI Layer → Model Serving. All inference runs in the Model Serving layer; the backend never calls models directly.</p>
+<p><strong>Scope:</strong> AI model strategy only. No implementation changes; documentation definition only.</p>
+<hr />
+<h2 id="1-model-categories">1. Model Categories</h2>
+<h3 id="11-llm-large-language-models">1.1 LLM (Large Language Models)</h3>
+<p><strong>Purpose:</strong> Generate fluent, context-aware text from structured or semi-structured input. Used for explanations (risk, allocation, recommendation), narrative insights, and any task that requires natural language output grounded in platform data. LLMs consume prompts built by AI services (Orchestrator, Recommendation Reasoning Engine, Financial Insight Engine) and return completion text. No training in-platform; use pre-trained or fine-tuned open-source models (e.g. LLaMA, Mistral, Mixtral) served via a single inference API.</p>
+<p><strong>Typical use:</strong> Risk score explanation, allocation explanation, recommendation reasoning, financial insight generation, optional summarization of extracted document content.</p>
+<hr />
+<h3 id="12-embedding-models">1.2 Embedding Models</h3>
+<p><strong>Purpose:</strong> Map text (or structured content serialized as text) to fixed-size dense vectors for similarity search and retrieval. Used for semantic search over product descriptions, document chunks, or FAQ content so that the AI can retrieve relevant context before calling the LLM (RAG). Embedding models are stateless: input text → output vector; no generation. Smaller and faster than LLMs; often run on CPU or a single GPU shared across many requests.</p>
+<p><strong>Typical use:</strong> Semantic search (product search, document retrieval), RAG context retrieval before LLM calls, optional clustering or deduplication of content.</p>
+<hr />
+<h3 id="13-ocr-models">1.3 OCR Models</h3>
+<p><strong>Purpose:</strong> Convert image or scanned-document pixels into machine-readable text (and optionally layout structure such as regions, lines, tables). Used when uploaded documents are images or image-based PDFs. Output is raw text and layout; downstream extraction models or rules then parse that text into structured entities. OCR can be a dedicated model (e.g. Tesseract, PaddleOCR, or a cloud OCR API) or a component within a document pipeline.</p>
+<p><strong>Typical use:</strong> Document Intelligence pipeline for scanned CAS, bank statements, or photos of documents before entity extraction.</p>
+<hr />
+<h3 id="14-document-extraction-models">1.4 Document Extraction Models</h3>
+<p><strong>Purpose:</strong> Turn document text (and optionally layout) into structured entities (e.g. scheme name, holdings, transactions, policy number, premium). Can be rule-based (regex, templates), LLM-based (prompt + completion with structured output), or a dedicated extraction model (e.g. NER, layout-aware extraction). In this strategy, “Document Extraction Models” includes both LLM-used-for-extraction and any dedicated extractors; the important distinction is the <em>task</em> (extraction) rather than a single model class. For clarity: extraction can be done by an LLM with a strict output schema or by a smaller task-specific model.</p>
+<p><strong>Typical use:</strong> CAS parsing, bank statement transaction extraction, insurance policy field extraction, tax document field extraction. Output feeds platform storage and downstream workflows.</p>
+<hr />
+<h3 id="15-tabular-ml-models-future">1.5 Tabular ML Models (Future)</h3>
+<p><strong>Purpose:</strong> Predict numeric or categorical outcomes from structured, tabular data (e.g. user features, portfolio features, market features). Examples: portfolio return prediction, risk tier prediction from behavior, churn or engagement prediction. These are classical ML (e.g. gradient boosting, linear models) or small neural nets, not LLMs. Training and serving are separate from the LLM path; they can be served via the same Model Serving layer (e.g. a separate endpoint or container) or a dedicated tabular-model service.</p>
+<p><strong>Typical use:</strong> Future capabilities such as portfolio performance prediction, next-best-action, or risk trend prediction. Not required for Phase 1 explanation/insight/document flows.</p>
+<hr />
+<h2 id="2-capability-model-type-mapping">2. Capability → Model Type Mapping</h2>
+<table>
+<thead>
+<tr>
+<th>Capability</th>
+<th>Primary model type</th>
+<th>Secondary / optional</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Risk explanation</strong></td>
+<td>LLM</td>
+<td>—</td>
+<td>Orchestrator builds prompt from score/band/components; LLM returns explanation text.</td>
+</tr>
+<tr>
+<td><strong>Allocation explanation</strong></td>
+<td>LLM</td>
+<td>—</td>
+<td>Orchestrator or Recommendation Reasoning builds prompt from allocation + funds + profile; LLM returns explanation.</td>
+</tr>
+<tr>
+<td><strong>Recommendation reasoning</strong></td>
+<td>LLM</td>
+<td>—</td>
+<td>Same as allocation; can be same LLM with different prompt or dedicated smaller LLM.</td>
+</tr>
+<tr>
+<td><strong>Financial insights</strong></td>
+<td>LLM</td>
+<td>Embedding (optional)</td>
+<td>LLM generates narrative from profile + portfolio; optional RAG over insights library using embeddings.</td>
+</tr>
+<tr>
+<td><strong>Document extraction</strong></td>
+<td>Document extraction (LLM or dedicated)</td>
+<td>OCR</td>
+<td>If input is image/scan, OCR first; then extraction model (LLM with schema or NER/extraction model) produces entities.</td>
+</tr>
+<tr>
+<td><strong>Semantic search</strong></td>
+<td>Embedding</td>
+<td>LLM (optional)</td>
+<td>Embedding model for query and corpus; optional LLM to refine or summarize retrieved chunks.</td>
+</tr>
+<tr>
+<td><strong>Future portfolio prediction</strong></td>
+<td>Tabular ML</td>
+<td>LLM (optional)</td>
+<td>Tabular model for numeric prediction; optional LLM to explain or summarize prediction.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Summary:</strong> Explanation, reasoning, and insight are <strong>LLM-driven</strong>. Document understanding is <strong>OCR + extraction</strong> (extraction can be LLM or dedicated model). Semantic retrieval is <strong>embedding-driven</strong>, with optional LLM. Future predictive features are <strong>tabular ML</strong>, with optional LLM for narrative.</p>
+<hr />
+<h2 id="3-how-models-interact-with-ai-services">3. How Models Interact with AI Services</h2>
+<h3 id="31-ai-orchestrator-llm">3.1 AI Orchestrator → LLM</h3>
+<p><strong>Interaction:</strong> The Orchestrator prepares context (e.g. risk score, band, components) and builds a prompt. It calls the Model Serving layer’s <strong>LLM completion API</strong> (e.g. single prompt → completion). The LLM returns natural language; the Orchestrator may validate or trim the response and return it to the Gateway.</p>
+<p><strong>Reasoning:</strong> Orchestrator owns “what to ask” and “what to do with the answer”; it does not own model weights or inference. All generation tasks (risk explanation, allocation explanation, general insight) that need one or more LLM calls go through the Orchestrator (or a dedicated service that also uses the LLM). One LLM endpoint can serve multiple request types by varying the prompt.</p>
+<hr />
+<h3 id="32-document-intelligence-service-ocr-extraction">3.2 Document Intelligence Service → OCR + Extraction</h3>
+<p><strong>Interaction:</strong> For image or scanned PDF input, Document Intelligence first calls an <strong>OCR</strong> capability (dedicated OCR model or API) to get text and layout. It then passes that text (and optionally layout) to an <strong>extraction</strong> step: either an LLM prompted with a strict output schema (e.g. JSON with holdings, transactions) or a dedicated document extraction model. The service returns structured entities to the Gateway; the Gateway (or backend) persists them.</p>
+<p><strong>Reasoning:</strong> OCR and extraction are separate steps so that (1) OCR can be swapped (e.g. cloud vs on-prem) without changing extraction logic, and (2) extraction can use LLM for flexibility or a smaller model for speed/cost. Document Intelligence orchestrates the pipeline; Model Serving exposes OCR and extraction endpoints (or a single “document pipeline” endpoint that runs both internally).</p>
+<hr />
+<h3 id="33-recommendation-reasoning-engine-llm">3.3 Recommendation Reasoning Engine → LLM</h3>
+<p><strong>Interaction:</strong> The Recommendation Reasoning Engine receives allocation + recommended funds + profile from the Gateway. It builds a prompt (e.g. “Explain why these funds were chosen for this user”) and calls the <strong>LLM completion API</strong>. The LLM returns reasoning text; the engine returns it in the AIResponse result.</p>
+<p><strong>Reasoning:</strong> Recommendation reasoning is a text-generation task; an LLM is the natural fit. It can share the same LLM as allocation explanation with a different prompt, or use a smaller/cheaper LLM if latency and cost are constrained. The engine does not perform ranking or allocation; it only explains the platform’s recommendation.</p>
+<hr />
+<h3 id="34-financial-insight-engine-llm">3.4 Financial Insight Engine → LLM</h3>
+<p><strong>Interaction:</strong> The Financial Insight Engine receives FinancialProfile and optionally Portfolio. It builds a prompt (e.g. “Generate a short narrative insight for this user’s risk and portfolio”) and calls the <strong>LLM completion API</strong>. Optionally it first uses <strong>semantic retrieval</strong> (see below) to pull similar insights or product snippets, then includes them in the prompt (RAG). The LLM returns narrative text; the engine returns it in the result.</p>
+<p><strong>Reasoning:</strong> Insights are narrative; an LLM is appropriate. RAG (embedding + retrieval + LLM) is optional for Phase 2+ to ground responses in an insights library or product catalog.</p>
+<hr />
+<h3 id="35-semantic-retrieval-embedding-model">3.5 Semantic Retrieval → Embedding Model</h3>
+<p><strong>Interaction:</strong> A retrieval component (e.g. inside Financial Insight Engine or a dedicated RAG service) takes a query (e.g. user profile summary or “diversification insight”). It calls the <strong>embedding API</strong> to get a query vector, then queries a vector store (e.g. product descriptions, document chunks, insight templates) for similar vectors. Retrieved items are passed to the LLM as context or returned as search results.</p>
+<p><strong>Reasoning:</strong> Embedding models are optimized for similarity; they are not used for generation. Separation allows the vector store and embedding model to be updated independently of the LLM. The same embedding model can serve product search, document retrieval, and RAG.</p>
+<hr />
+<h3 id="36-summary-service-model">3.6 Summary: Service → Model</h3>
+<table>
+<thead>
+<tr>
+<th>AI service</th>
+<th>Model(s) used</th>
+<th>Flow</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AI Orchestrator</td>
+<td>LLM</td>
+<td>Context → prompt → completion API → text.</td>
+</tr>
+<tr>
+<td>Document Intelligence Service</td>
+<td>OCR, then Document extraction (LLM or dedicated)</td>
+<td>Binary → OCR API → text → extraction API → entities.</td>
+</tr>
+<tr>
+<td>Recommendation Reasoning Engine</td>
+<td>LLM</td>
+<td>Recommendation + profile → prompt → completion API → reasoning text.</td>
+</tr>
+<tr>
+<td>Financial Insight Engine</td>
+<td>LLM; optionally Embedding + vector store (RAG)</td>
+<td>Profile + portfolio → (optional: embed + retrieve) → prompt → completion API → insight text.</td>
+</tr>
+<tr>
+<td>Semantic search / RAG</td>
+<td>Embedding</td>
+<td>Query → embed → vector search → (optional) LLM with retrieved context.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-model-selection-criteria">4. Model Selection Criteria</h2>
+<h3 id="41-latency-requirements">4.1 Latency Requirements</h3>
+<ul>
+<li><strong>User-facing explanation (risk, allocation, recommendation):</strong> Target p95 &lt; 5 s. Single LLM call with small-to-medium context. Prefer models that complete in 1–3 s on target hardware (e.g. 7B–8B parameter models on one GPU, or smaller models).</li>
+<li><strong>Financial insight (on-demand):</strong> Same as above; single LLM call.</li>
+<li><strong>Document extraction:</strong> Acceptable 10–60 s for full pipeline (OCR + extraction). Can be async from user perspective; sync API should set gateway timeout accordingly (e.g. 60 s).</li>
+<li><strong>Semantic search / embedding:</strong> Target &lt; 100 ms per embed for good UX when used in RAG; batch embedding for indexing can be slower.</li>
+</ul>
+<p><strong>Implication:</strong> Prefer smaller or quantized LLMs for explanation/reasoning/insight if they meet quality bars; reserve larger LLMs for complex or low-latency-tolerant tasks.</p>
+<hr />
+<h3 id="42-gpu-vs-cpu-inference">4.2 GPU vs CPU Inference</h3>
+<ul>
+<li><strong>LLM:</strong> GPU (or dedicated accelerator) for 7B+ parameter models at acceptable latency. CPU-only is possible for very small models (e.g. 1B–3B) but latency and throughput may be limiting.</li>
+<li><strong>Embedding:</strong> Often feasible on CPU for batch and moderate QPS; GPU can reduce latency and increase throughput for real-time RAG.</li>
+<li><strong>OCR:</strong> Depends on model; many OCR engines run on CPU; GPU can speed up heavy layouts.</li>
+<li><strong>Document extraction (LLM-based):</strong> Same as LLM. Dedicated small extraction models may run on CPU.</li>
+<li><strong>Tabular ML:</strong> Typically CPU (e.g. XGBoost, sklearn); small neural nets can run on CPU or GPU.</li>
+</ul>
+<p><strong>Implication:</strong> Model Serving layer should support both GPU (LLM, optional embedding/OCR) and CPU (embedding, tabular, small models) so that cost and capacity can be balanced.</p>
+<hr />
+<h3 id="43-cost-considerations">4.3 Cost Considerations</h3>
+<ul>
+<li><strong>LLM:</strong> Cost scales with model size, sequence length, and QPS. Smaller models (7B–8B) reduce cost per request; quantization (e.g. INT8) further reduces memory and can reduce cost. Prefer one “general” LLM for explanation/insight/reasoning to avoid multiple large deployments.</li>
+<li><strong>Embedding:</strong> Usually low cost per request; batch indexing has one-time cost.</li>
+<li><strong>OCR + extraction:</strong> Per-document cost; batch and async processing avoid blocking user flows and allow use of slightly heavier models if needed.</li>
+<li><strong>Tabular ML:</strong> Typically low inference cost; training cost is separate.</li>
+</ul>
+<p><strong>Implication:</strong> Use smaller or quantized LLMs where quality is sufficient; reserve larger/full-precision models for tasks that clearly benefit (e.g. complex reasoning, multi-turn, or high-stakes explanation).</p>
+<hr />
+<h3 id="44-accuracy-and-capability-requirements">4.4 Accuracy and Capability Requirements</h3>
+<ul>
+<li><strong>High-capability LLM (e.g. 13B+, or 7B with strong instruction tuning):</strong> Use when output must be nuanced, compliant, or multi-facet (e.g. allocation explanation that references risk, diversification, and product fit). Recommendation reasoning and allocation explanation can justify a better model if regulatory or UX bar is high.</li>
+<li><strong>Smaller / more efficient LLM (e.g. 7B–8B, quantized):</strong> Use for risk explanation (narrow task), short insights, or high-volume/low-latency paths. Acceptable when prompts are well-structured and output format is constrained (e.g. one paragraph).</li>
+<li><strong>Dedicated extraction model vs LLM:</strong> Dedicated (NER, layout-based) can be more accurate and faster for fixed document types (e.g. CAS); LLM extraction is more flexible for new doc types and varied layouts. Start with LLM for extraction for flexibility; add dedicated models later for high-volume, fixed-schema types.</li>
+</ul>
+<p><strong>Summary:</strong> Map “explanation/reasoning/insight” to one or two LLM tiers (e.g. “fast” 7B for risk/short insight, “quality” 13B for allocation/recommendation reasoning) and document extraction to OCR + LLM or dedicated extractor based on volume and schema stability.</p>
+<hr />
+<h2 id="5-model-extensibility">5. Model Extensibility</h2>
+<p>The architecture keeps the Quarkus backend unchanged while allowing model replacement, multi-model orchestration, A/B testing, and upgrades. All of the following are done inside the <strong>AI Layer</strong> and <strong>Model Serving</strong> layer; the backend only calls the <strong>AI Gateway</strong> with the same <strong>AIRequest</strong> / <strong>AIResponse</strong> contract.</p>
+<h3 id="51-model-replacement">5.1 Model Replacement</h3>
+<ul>
+<li><strong>Where it happens:</strong> Model Serving layer loads model artifacts (weights, config) from a registry or volume. To replace a model, deploy a new model version (or new model id) and update the serving config to point to it. AI services (Orchestrator, Document Intelligence, etc.) call the Model Serving API by <strong>model id</strong> or <strong>endpoint name</strong> (e.g. <code>explain_risk_score</code> → <code>llama-3-8b-v1</code>). Changing the mapping from endpoint to model id does not require backend or Gateway API changes.</li>
+<li><strong>Backend impact:</strong> None. Request/response shape (AIRequest, AIResponse) and Gateway endpoints stay the same. Only the model behind the gateway changes.</li>
+</ul>
+<hr />
+<h3 id="52-multi-model-orchestration">5.2 Multi-Model Orchestration</h3>
+<ul>
+<li><strong>Where it happens:</strong> AI services can call more than one model in a single workflow. Example: Document Intelligence calls OCR endpoint, then extraction endpoint (different model or same LLM with different prompt). Financial Insight Engine can call embedding endpoint for retrieval, then LLM endpoint for generation. Orchestration logic lives in the AI Layer (Document Intelligence, Orchestrator, etc.); the Gateway can expose a single operation (e.g. <code>extract_document</code>) that internally runs OCR + extraction.</li>
+<li><strong>Backend impact:</strong> None. Backend sends one request; Gateway returns one response. Internal multi-model steps are hidden.</li>
+</ul>
+<hr />
+<h3 id="53-ab-testing">5.3 A/B Testing</h3>
+<ul>
+<li><strong>Where it happens:</strong> AI Gateway or the service behind it (e.g. Orchestrator) can route a percentage of requests to different model backends based on request id, user id, or random bucket. Example: 90% of <code>explain_risk_score</code> to <code>llama-3-8b</code>, 10% to <code>mistral-7b</code>. Results are logged with model id; offline evaluation compares metrics (latency, user feedback, compliance). Decision to promote a variant is config-driven (feature flag or routing config); no backend change.</li>
+<li><strong>Backend impact:</strong> None. Backend may optionally send a <code>metadata.experimentId</code> or similar for analysis; response shape is unchanged. Model id can be returned in <code>AIResponse.modelUsed</code> for logging.</li>
+</ul>
+<hr />
+<h3 id="54-model-upgrades">5.4 Model Upgrades</h3>
+<ul>
+<li><strong>Where it happens:</strong> Model Serving deploys a new version (e.g. <code>llama-3-8b-v2</code> with better instruction tuning). AI services or Gateway config is updated to use the new version. Rollout can be gradual (routing by percentage or by user segment). Old version is kept until the new one is validated, then deprecated.</li>
+<li><strong>Backend impact:</strong> None. Contract (AIRequest, AIResponse) is stable; only the model version and behavior change. Backend and clients do not depend on model identity except optionally for logging or analytics via <code>modelUsed</code>.</li>
+</ul>
+<hr />
+<h3 id="55-summary">5.5 Summary</h3>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Handled in</th>
+<th>Backend change?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Replace model (e.g. LLaMA → Mistral)</td>
+<td>Model Serving + Gateway/service config</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Use multiple models in one flow (OCR + LLM)</td>
+<td>AI Layer (Document Intelligence, etc.)</td>
+<td>No</td>
+</tr>
+<tr>
+<td>A/B test two LLMs for explanation</td>
+<td>Gateway or Orchestrator routing + config</td>
+<td>No (optional metadata)</td>
+</tr>
+<tr>
+<td>Upgrade to new model version</td>
+<td>Model Serving + config</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>Stable <strong>Gateway API</strong> and <strong>request/response schema</strong> ensure the backend remains decoupled from model choice, version, and orchestration details.</p>
+<hr />
+<p><em>This document defines the AI model strategy only. No implementation files are modified.</em></p>

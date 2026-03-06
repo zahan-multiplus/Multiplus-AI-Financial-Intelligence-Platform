@@ -1,0 +1,398 @@
+<h1 id="ai-gateway-api-contract">AI Gateway — API Contract</h1>
+<p><strong>Purpose:</strong> Concrete API contract between the Multiplus Quarkus backend and the AI Gateway. All AI functionality is exposed through these endpoints; the backend never calls the Model Serving layer directly.</p>
+<p><strong>Reference:</strong> Request/response envelopes are defined in <code>PLATFORM_AI_DATA_SCHEMAS.md</code> (AIRequest, AIResponse). This document specifies the per-endpoint usage and payloads.</p>
+<p><strong>Base path:</strong> All endpoints are relative to the AI Gateway base URL (e.g. <code>https://ai-gateway.example.com</code>). Assume API version prefix if needed (e.g. <code>/v1</code>); paths below are written without version for brevity.</p>
+<hr />
+<h2 id="common-conventions">Common Conventions</h2>
+<ul>
+<li><strong>Content-Type:</strong> <code>application/json</code> for request and response bodies.</li>
+<li><strong>Authentication:</strong> Service-to-service (e.g. API key, JWT, or mTLS) as agreed; not defined in this contract.</li>
+<li><strong>Request envelope:</strong> Every request body is an <strong>AIRequest</strong> with <code>requestType</code> aligned to the endpoint (or endpoint inferred from path).</li>
+<li><strong>Response envelope:</strong> Every response body is an <strong>AIResponse</strong> with <code>requestId</code> echoed, <code>status</code>, and <code>result</code> or <code>error</code>.</li>
+<li><strong>Idempotency:</strong> Backend should send a unique <code>requestId</code> per call; gateway may use it for idempotent handling or logging.</li>
+</ul>
+<hr />
+<h2 id="1-risk-score-explanation">1. Risk Score Explanation</h2>
+<p><strong>Endpoint:</strong> <code>POST /ai/explain-risk-score</code></p>
+<p><strong>HTTP method:</strong> POST</p>
+<p><strong>Purpose:</strong> Generate a human-readable explanation of the user's risk score (e.g. why they are in a given band, what the score reflects). Used when the user asks "Explain my risk score" or when pre-generating explanations after a new score is computed.</p>
+<p><strong>Request structure:</strong><br />
+Body is an <strong>AIRequest</strong> where:<br />
+- <code>requestType</code>: <code>"explain_risk_score"</code> (or omitted if path implies it).<br />
+- <code>userId</code>: Required (string).<br />
+- <code>contextObject</code>: <strong>FinancialProfile</strong> or a minimal subset sufficient for explanation:<br />
+  - Required: <code>riskScore</code>, <code>riskBand</code>.<br />
+  - Recommended: <code>questionnaireResults</code> (if questionnaire-based), or score components (e.g. credit, income, DTI) if available.<br />
+  - Optional: <code>age</code>, <code>investmentHorizon</code>, <code>incomeRange</code>, <code>investmentGoals</code>, etc. for richer narrative.<br />
+- <code>metadata</code>: Optional (e.g. <code>locale</code>).<br />
+- <code>timeout</code>: Optional (milliseconds).</p>
+<p><strong>Response structure:</strong><br />
+Body is an <strong>AIResponse</strong> where:<br />
+- <code>status</code>: <code>"success"</code> | <code>"error"</code> | <code>"timeout"</code>.<br />
+- <code>result</code>: Object with at least:<br />
+  - <code>explanation</code> (string): Human-readable explanation text.<br />
+  - Optionally <code>reasoningStructure</code> (object): e.g. breakdown by component or section for UI.<br />
+- <code>error</code>: Populated when <code>status</code> is <code>"error"</code> (e.g. <code>code</code>, <code>message</code>).</p>
+<p><strong>Example request</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_explain_risk_001&quot;,
+  &quot;requestType&quot;: &quot;explain_risk_score&quot;,
+  &quot;userId&quot;: &quot;usr_abc123&quot;,
+  &quot;contextObject&quot;: {
+    &quot;userId&quot;: &quot;usr_abc123&quot;,
+    &quot;riskScore&quot;: 420,
+    &quot;riskBand&quot;: &quot;Moderate&quot;,
+    &quot;investmentHorizon&quot;: &quot;long&quot;,
+    &quot;questionnaireResults&quot;: {
+      &quot;version&quot;: &quot;1.0&quot;,
+      &quot;compositeScore&quot;: 420,
+      &quot;band&quot;: &quot;Moderate&quot;,
+      &quot;categoryScores&quot;: { &quot;risk_tolerance&quot;: 65, &quot;time_horizon&quot;: 70 }
+    },
+    &quot;generatedAt&quot;: &quot;2025-03-07T10:30:00Z&quot;
+  },
+  &quot;metadata&quot;: { &quot;locale&quot;: &quot;en-IN&quot; },
+  &quot;timeout&quot;: 15000
+}
+</code></pre>
+<p><strong>Example response</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_explain_risk_001&quot;,
+  &quot;status&quot;: &quot;success&quot;,
+  &quot;result&quot;: {
+    &quot;explanation&quot;: &quot;Your risk score of 420 places you in the Moderate band. This reflects a balanced approach: your risk tolerance and time horizon scores support a mix of equity and debt. You can consider a 50–60% equity allocation with the remainder in debt and hybrid funds.&quot;,
+    &quot;reasoningStructure&quot;: {
+      &quot;summary&quot;: &quot;Moderate band, balanced profile&quot;,
+      &quot;factors&quot;: [&quot;risk_tolerance&quot;, &quot;time_horizon&quot;, &quot;composite_score&quot;]
+    }
+  },
+  &quot;reasoning&quot;: null,
+  &quot;modelUsed&quot;: &quot;llama-3-8b&quot;,
+  &quot;latency&quot;: 1200,
+  &quot;error&quot;: null
+}
+</code></pre>
+<p><strong>Sync vs async:</strong> Synchronous. Backend blocks until the gateway returns. User-facing flow.</p>
+<p><strong>Timeout recommendation:</strong> 15–30 seconds. Risk explanation is a single LLM call with small context.</p>
+<hr />
+<h2 id="2-allocation-explanation">2. Allocation Explanation</h2>
+<p><strong>Endpoint:</strong> <code>POST /ai/explain-allocation</code></p>
+<p><strong>HTTP method:</strong> POST</p>
+<p><strong>Purpose:</strong> Explain why a particular asset allocation and fund set were recommended (e.g. alignment with risk band, gap closure, diversification). Used when the user views their recommendation and asks for an explanation.</p>
+<p><strong>Request structure:</strong><br />
+Body is an <strong>AIRequest</strong> where:<br />
+- <code>requestType</code>: <code>"explain_allocation"</code>.<br />
+- <code>userId</code>: Required (string).<br />
+- <code>contextObject</code>: Object containing:<br />
+  - <strong>FinancialProfile</strong> (or minimal subset: <code>riskScore</code>, <code>riskBand</code>, <code>investmentHorizon</code>).<br />
+  - <strong>Recommendation</strong> (or equivalent): <code>allocation</code>, <code>recommendedFunds</code>, optionally <code>metadata</code> (e.g. risk band, gap threshold). Do not require <code>reasoning</code> in request (that is the output).<br />
+- <code>metadata</code>: Optional (e.g. <code>locale</code>).<br />
+- <code>timeout</code>: Optional (ms).</p>
+<p><strong>Response structure:</strong><br />
+Body is an <strong>AIResponse</strong> where:<br />
+- <code>status</code>: <code>"success"</code> | <code>"error"</code> | <code>"timeout"</code>.<br />
+- <code>result</code>: Object with at least:<br />
+  - <code>explanation</code> (string): Human-readable explanation of the allocation and fund selection.<br />
+- <code>error</code>: Populated when <code>status</code> is <code>"error"</code>.</p>
+<p><strong>Example request</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_explain_alloc_001&quot;,
+  &quot;requestType&quot;: &quot;explain_allocation&quot;,
+  &quot;userId&quot;: &quot;usr_abc123&quot;,
+  &quot;contextObject&quot;: {
+    &quot;financialProfile&quot;: {
+      &quot;userId&quot;: &quot;usr_abc123&quot;,
+      &quot;riskScore&quot;: 420,
+      &quot;riskBand&quot;: &quot;Moderate&quot;,
+      &quot;investmentHorizon&quot;: &quot;long&quot;,
+      &quot;generatedAt&quot;: &quot;2025-03-07T10:30:00Z&quot;
+    },
+    &quot;recommendation&quot;: {
+      &quot;recommendationId&quot;: &quot;rec_001&quot;,
+      &quot;userId&quot;: &quot;usr_abc123&quot;,
+      &quot;allocation&quot;: { &quot;equity&quot;: 50, &quot;debt&quot;: 35, &quot;hybrid&quot;: 10, &quot;cash&quot;: 5 },
+      &quot;recommendedFunds&quot;: [
+        { &quot;schemeId&quot;: &quot;fund_001&quot;, &quot;schemeName&quot;: &quot;ABC Equity Fund&quot;, &quot;category&quot;: &quot;Equity&quot;, &quot;suggestedAllocationPercent&quot;: 25, &quot;fundRiskScore&quot;: 400 }
+      ],
+      &quot;generatedAt&quot;: &quot;2025-03-07T10:35:00Z&quot;,
+      &quot;metadata&quot;: { &quot;riskBand&quot;: &quot;Moderate&quot;, &quot;gapThreshold&quot;: &quot;Acceptable&quot; }
+    }
+  },
+  &quot;metadata&quot;: { &quot;locale&quot;: &quot;en-IN&quot; },
+  &quot;timeout&quot;: 20000
+}
+</code></pre>
+<p><strong>Example response</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_explain_alloc_001&quot;,
+  &quot;status&quot;: &quot;success&quot;,
+  &quot;result&quot;: {
+    &quot;explanation&quot;: &quot;Your Moderate risk profile supports a 50% equity allocation. The recommended funds were chosen because their risk scores sit within an acceptable range of your score (420), balancing growth with stability. ABC Equity Fund fits the large-cap equity slot and helps diversify your portfolio while staying within your risk band.&quot;
+  },
+  &quot;reasoning&quot;: null,
+  &quot;modelUsed&quot;: &quot;llama-3-8b&quot;,
+  &quot;latency&quot;: 1800,
+  &quot;error&quot;: null
+}
+</code></pre>
+<p><strong>Sync vs async:</strong> Synchronous. User is waiting for the explanation on the recommendation screen.</p>
+<p><strong>Timeout recommendation:</strong> 20–30 seconds. Single LLM call with allocation + fund list context.</p>
+<hr />
+<h2 id="3-document-extraction">3. Document Extraction</h2>
+<p><strong>Endpoint:</strong> <code>POST /ai/extract-document</code></p>
+<p><strong>HTTP method:</strong> POST</p>
+<p><strong>Purpose:</strong> Extract structured data from uploaded financial documents. Supports document types such as CAS statements, bank statements, insurance policies, and tax documents. Gateway delegates to Document Intelligence Service; result is structured fields (e.g. holdings, transactions, policy details) for the backend to persist.</p>
+<p><strong>Request structure:</strong><br />
+Body is an <strong>AIRequest</strong> where:<br />
+- <code>requestType</code>: <code>"extract_document"</code>.<br />
+- <code>userId</code>: Optional but recommended (string).<br />
+- <code>contextObject</code>: Object containing:<br />
+  - <code>documentId</code> (string): Platform document identifier.<br />
+  - <code>documentType</code> (string): e.g. <code>"CAS"</code>, <code>"BANK_STATEMENT"</code>, <code>"INSURANCE"</code>, <code>"TAX"</code>.<br />
+  - <code>storageKey</code> (string): Reference for the gateway to fetch the document (e.g. S3 key, or URL if gateway can access it). Format is environment-specific (e.g. <code>s3://bucket/key</code> or <code>https://...</code>).<br />
+  - Optionally <code>options</code>: e.g. <code>{ "extractTables": true }</code> for document-type-specific hints.<br />
+- <code>metadata</code>: Optional.<br />
+- <code>timeout</code>: Optional (ms); document processing can be slower.</p>
+<p><strong>Response structure:</strong><br />
+Body is an <strong>AIResponse</strong> where:<br />
+- <code>status</code>: <code>"success"</code> | <code>"error"</code> | <code>"timeout"</code>.<br />
+- <code>result</code>: Object with document-type-specific structure, for example:<br />
+  - Common: <code>entities</code> (object with named fields), <code>confidence</code> (number 0–1).<br />
+  - CAS: e.g. <code>schemeName</code>, <code>holdings[]</code>, <code>transactions[]</code>.<br />
+  - Bank: e.g. <code>accountNumber</code>, <code>transactions[]</code>, <code>balance</code>.<br />
+  - Insurance: e.g. <code>policyNumber</code>, <code>premium</code>, <code>sumAssured</code>.<br />
+- <code>error</code>: Populated when <code>status</code> is <code>"error"</code> (e.g. unsupported type, parse failure).</p>
+<p><strong>Example request</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_extract_doc_001&quot;,
+  &quot;requestType&quot;: &quot;extract_document&quot;,
+  &quot;userId&quot;: &quot;usr_abc123&quot;,
+  &quot;contextObject&quot;: {
+    &quot;documentId&quot;: &quot;doc_upload_456&quot;,
+    &quot;documentType&quot;: &quot;CAS&quot;,
+    &quot;storageKey&quot;: &quot;s3://multiplus-docs/usr_abc123/doc_upload_456.pdf&quot;
+  },
+  &quot;metadata&quot;: null,
+  &quot;timeout&quot;: 60000
+}
+</code></pre>
+<p><strong>Example response</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_extract_doc_001&quot;,
+  &quot;status&quot;: &quot;success&quot;,
+  &quot;result&quot;: {
+    &quot;entities&quot;: {
+      &quot;schemeName&quot;: &quot;ABC Growth Fund&quot;,
+      &quot;folioNumber&quot;: &quot;FOL123&quot;,
+      &quot;holdings&quot;: [
+        { &quot;scheme&quot;: &quot;ABC Growth Fund&quot;, &quot;units&quot;: 100, &quot;nav&quot;: 150, &quot;value&quot;: 15000 }
+      ],
+      &quot;transactions&quot;: []
+    },
+    &quot;confidence&quot;: 0.92
+  },
+  &quot;reasoning&quot;: null,
+  &quot;modelUsed&quot;: &quot;document-extraction-v1&quot;,
+  &quot;latency&quot;: 3500,
+  &quot;error&quot;: null
+}
+</code></pre>
+<p><strong>Sync vs async:</strong> Can be synchronous (backend waits for extraction) or asynchronous (gateway returns <code>202 Accepted</code> with a <code>jobId</code>, backend polls or receives callback). Contract above is synchronous; async variant can be added later with a separate status/poll endpoint.</p>
+<p><strong>Timeout recommendation:</strong> 45–90 seconds for OCR + extraction. Backend should set a higher timeout than for pure LLM endpoints.</p>
+<hr />
+<h2 id="4-financial-insight-generation">4. Financial Insight Generation</h2>
+<p><strong>Endpoint:</strong> <code>POST /ai/generate-insight</code></p>
+<p><strong>HTTP method:</strong> POST</p>
+<p><strong>Purpose:</strong> Generate narrative financial insights for the user, e.g. risk insights, portfolio diversification insights, or investment behavior insights. Used for dashboard widgets, notification content, or report sections.</p>
+<p><strong>Request structure:</strong><br />
+Body is an <strong>AIRequest</strong> where:<br />
+- <code>requestType</code>: <code>"generate_financial_insight"</code> or <code>"generate_insight"</code>.<br />
+- <code>userId</code>: Required (string).<br />
+- <code>contextObject</code>: Object containing:<br />
+  - <strong>FinancialProfile</strong> (or subset).<br />
+  - <strong>Portfolio</strong> (or subset): holdings, assetAllocation, currentValue, performanceMetrics. Can be null if user has no portfolio yet.<br />
+  - Optionally <code>insightType</code>: e.g. <code>"risk"</code>, <code>"diversification"</code>, <code>"behavior"</code>, or omit for a general insight.<br />
+- <code>metadata</code>: Optional (e.g. <code>locale</code>, <code>channel</code> for notification).<br />
+- <code>timeout</code>: Optional (ms).</p>
+<p><strong>Response structure:</strong><br />
+Body is an <strong>AIResponse</strong> where:<br />
+- <code>status</code>: <code>"success"</code> | <code>"error"</code> | <code>"timeout"</code>.<br />
+- <code>result</code>: Object with at least:<br />
+  - <code>insight</code> (string): Narrative insight text.<br />
+  - Optionally <code>sections</code> (object or array): e.g. <code>risk</code>, <code>diversification</code>, <code>behavior</code> for structured display.<br />
+- <code>error</code>: Populated when <code>status</code> is <code>"error"</code>.</p>
+<p><strong>Example request</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_insight_001&quot;,
+  &quot;requestType&quot;: &quot;generate_financial_insight&quot;,
+  &quot;userId&quot;: &quot;usr_abc123&quot;,
+  &quot;contextObject&quot;: {
+    &quot;financialProfile&quot;: {
+      &quot;userId&quot;: &quot;usr_abc123&quot;,
+      &quot;riskScore&quot;: 420,
+      &quot;riskBand&quot;: &quot;Moderate&quot;,
+      &quot;investmentHorizon&quot;: &quot;long&quot;,
+      &quot;investmentGoals&quot;: [&quot;retirement&quot;, &quot;wealth_creation&quot;],
+      &quot;generatedAt&quot;: &quot;2025-03-07T10:30:00Z&quot;
+    },
+    &quot;portfolio&quot;: {
+      &quot;portfolioId&quot;: &quot;port_xyz789&quot;,
+      &quot;userId&quot;: &quot;usr_abc123&quot;,
+      &quot;holdings&quot;: [],
+      &quot;assetAllocation&quot;: { &quot;equity&quot;: 0, &quot;debt&quot;: 0, &quot;hybrid&quot;: 0, &quot;cash&quot;: 0 },
+      &quot;currentValue&quot;: 0,
+      &quot;asOf&quot;: &quot;2025-03-07T00:00:00Z&quot;
+    },
+    &quot;insightType&quot;: &quot;risk&quot;
+  },
+  &quot;metadata&quot;: { &quot;locale&quot;: &quot;en-IN&quot; },
+  &quot;timeout&quot;: 20000
+}
+</code></pre>
+<p><strong>Example response</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_insight_001&quot;,
+  &quot;status&quot;: &quot;success&quot;,
+  &quot;result&quot;: {
+    &quot;insight&quot;: &quot;Your Moderate risk profile suggests a balanced mix of equity and debt. With a long investment horizon and goals like retirement and wealth creation, you can consider gradually building equity exposure through SIPs in diversified funds while keeping a cushion in debt.&quot;,
+    &quot;sections&quot;: {
+      &quot;risk&quot;: &quot;Moderate band supports 50–60% equity.&quot;,
+      &quot;diversification&quot;: &quot;No current holdings; consider starting with one equity and one debt fund.&quot;
+    }
+  },
+  &quot;reasoning&quot;: null,
+  &quot;modelUsed&quot;: &quot;llama-3-8b&quot;,
+  &quot;latency&quot;: 1500,
+  &quot;error&quot;: null
+}
+</code></pre>
+<p><strong>Sync vs async:</strong> Typically synchronous when requested on-demand (e.g. dashboard). Can be invoked asynchronously by the Trigger Engine for batch insight generation (e.g. daily digest); in that case the caller is the Trigger Engine, not the backend user API.</p>
+<p><strong>Timeout recommendation:</strong> 20–30 seconds for a single narrative insight.</p>
+<hr />
+<h2 id="5-recommendation-reasoning">5. Recommendation Reasoning</h2>
+<p><strong>Endpoint:</strong> <code>POST /ai/recommendation-reasoning</code></p>
+<p><strong>HTTP method:</strong> POST</p>
+<p><strong>Purpose:</strong> Explain why specific funds were selected for the recommendation (fund-level reasoning, risk alignment, ranking rationale). Complements allocation explanation with more focus on product choice. Can be used on the same screen as allocation explanation or as a separate “Why these funds?” section.</p>
+<p><strong>Request structure:</strong><br />
+Body is an <strong>AIRequest</strong> where:<br />
+- <code>requestType</code>: <code>"recommendation_reasoning"</code>.<br />
+- <code>userId</code>: Required (string).<br />
+- <code>contextObject</code>: Object containing:<br />
+  - <strong>FinancialProfile</strong> (or subset: <code>riskScore</code>, <code>riskBand</code>, <code>investmentHorizon</code>).<br />
+  - <strong>Recommendation</strong>: <code>recommendedFunds</code> (with schemeId, schemeName, category, suggestedAllocationPercent, fundRiskScore), and optionally <code>allocation</code>, <code>metadata</code>.<br />
+- <code>metadata</code>: Optional (e.g. <code>locale</code>).<br />
+- <code>timeout</code>: Optional (ms).</p>
+<p><strong>Response structure:</strong><br />
+Body is an <strong>AIResponse</strong> where:<br />
+- <code>status</code>: <code>"success"</code> | <code>"error"</code> | <code>"timeout"</code>.<br />
+- <code>result</code>: Object with at least:<br />
+  - <code>reasoning</code> (string): Human-readable reasoning for the fund selection.<br />
+  - Optionally <code>fundReasons</code> (array): Short reason per fund for UI bullets.<br />
+- <code>error</code>: Populated when <code>status</code> is <code>"error"</code>.</p>
+<p><strong>Example request</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_reasoning_001&quot;,
+  &quot;requestType&quot;: &quot;recommendation_reasoning&quot;,
+  &quot;userId&quot;: &quot;usr_abc123&quot;,
+  &quot;contextObject&quot;: {
+    &quot;financialProfile&quot;: {
+      &quot;userId&quot;: &quot;usr_abc123&quot;,
+      &quot;riskScore&quot;: 420,
+      &quot;riskBand&quot;: &quot;Moderate&quot;,
+      &quot;investmentHorizon&quot;: &quot;long&quot;,
+      &quot;generatedAt&quot;: &quot;2025-03-07T10:30:00Z&quot;
+    },
+    &quot;recommendation&quot;: {
+      &quot;recommendationId&quot;: &quot;rec_001&quot;,
+      &quot;userId&quot;: &quot;usr_abc123&quot;,
+      &quot;recommendedFunds&quot;: [
+        { &quot;schemeId&quot;: &quot;fund_001&quot;, &quot;schemeName&quot;: &quot;ABC Equity Fund&quot;, &quot;category&quot;: &quot;Equity&quot;, &quot;suggestedAllocationPercent&quot;: 25, &quot;fundRiskScore&quot;: 400 },
+        { &quot;schemeId&quot;: &quot;fund_002&quot;, &quot;schemeName&quot;: &quot;XYZ Debt Fund&quot;, &quot;category&quot;: &quot;Debt&quot;, &quot;suggestedAllocationPercent&quot;: 35, &quot;fundRiskScore&quot;: 350 }
+      ],
+      &quot;generatedAt&quot;: &quot;2025-03-07T10:35:00Z&quot;
+    }
+  },
+  &quot;metadata&quot;: { &quot;locale&quot;: &quot;en-IN&quot; },
+  &quot;timeout&quot;: 20000
+}
+</code></pre>
+<p><strong>Example response</strong></p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_reasoning_001&quot;,
+  &quot;status&quot;: &quot;success&quot;,
+  &quot;result&quot;: {
+    &quot;reasoning&quot;: &quot;ABC Equity Fund was selected for the equity slot because its risk score (400) sits within an acceptable range of your score (420), reducing volatility risk while allowing growth. XYZ Debt Fund fits your Moderate band for the debt portion and provides stability. Together they align with your long horizon and 50% equity target.&quot;,
+    &quot;fundReasons&quot;: [
+      &quot;ABC Equity Fund: Risk-aligned large-cap equity, acceptable gap to your score.&quot;,
+      &quot;XYZ Debt Fund: Stable debt option for Moderate band.&quot;
+    ]
+  },
+  &quot;reasoning&quot;: null,
+  &quot;modelUsed&quot;: &quot;llama-3-8b&quot;,
+  &quot;latency&quot;: 1900,
+  &quot;error&quot;: null
+}
+</code></pre>
+<p><strong>Sync vs async:</strong> Synchronous when the user is on the recommendation screen. Can be pre-generated asynchronously (e.g. on AllocationGenerated event) and cached for fast retrieval.</p>
+<p><strong>Timeout recommendation:</strong> 20–30 seconds.</p>
+<hr />
+<h2 id="summary-table">Summary Table</h2>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Purpose</th>
+<th>contextObject</th>
+<th>Sync/Async</th>
+<th>Timeout (recommended)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST /ai/explain-risk-score</code></td>
+<td>Human-readable risk score explanation</td>
+<td>FinancialProfile (min: riskScore, riskBand)</td>
+<td>Sync</td>
+<td>15–30 s</td>
+</tr>
+<tr>
+<td><code>POST /ai/explain-allocation</code></td>
+<td>Why this allocation and fund set</td>
+<td>FinancialProfile + Recommendation</td>
+<td>Sync</td>
+<td>20–30 s</td>
+</tr>
+<tr>
+<td><code>POST /ai/extract-document</code></td>
+<td>Structured extraction from documents</td>
+<td>documentId, documentType, storageKey</td>
+<td>Sync (or async later)</td>
+<td>45–90 s</td>
+</tr>
+<tr>
+<td><code>POST /ai/generate-insight</code></td>
+<td>Narrative financial insights</td>
+<td>FinancialProfile + Portfolio (+ optional insightType)</td>
+<td>Sync or async (batch)</td>
+<td>20–30 s</td>
+</tr>
+<tr>
+<td><code>POST /ai/recommendation-reasoning</code></td>
+<td>Why these funds were selected</td>
+<td>FinancialProfile + Recommendation</td>
+<td>Sync</td>
+<td>20–30 s</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="error-response-shape">Error Response Shape</h2>
+<p>For any endpoint, when <code>status</code> is <code>"error"</code> or <code>"timeout"</code>, the gateway returns an <strong>AIResponse</strong> with:</p>
+<ul>
+<li><code>status</code>: <code>"error"</code> or <code>"timeout"</code>.</li>
+<li><code>result</code>: null.</li>
+<li><code>error</code>: <code>{ "code": "&lt;ERROR_CODE&gt;", "message": "&lt;human-readable message&gt;" }</code>.</li>
+</ul>
+<p>Example error codes (to be aligned with gateway implementation): <code>GATEWAY_TIMEOUT</code>, <code>MODEL_UNAVAILABLE</code>, <code>INVALID_REQUEST</code>, <code>EXTRACTION_FAILED</code>, <code>RATE_LIMITED</code>.</p>
+<hr />
+<p><em>This document defines the API contract only. No implementation files are modified. OpenAPI/JSON Schema can be generated from this specification.</em></p>

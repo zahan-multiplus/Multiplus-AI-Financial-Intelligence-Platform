@@ -1,0 +1,103 @@
+<h1 id="multiplus-ai-platform-core-architecture-diagrams">Multiplus AI Platform — Core Architecture Diagrams</h1>
+<p><strong>Purpose:</strong> High-level sequence diagrams for the AI platform. Components and flows are defined in earlier documentation (AI Integration Architecture, AI Gateway API Contract, Model Serving Architecture).</p>
+<p><strong>Format:</strong> Mermaid sequence diagrams. Render in any Markdown viewer that supports Mermaid (e.g. GitHub, GitLab, VS Code with Mermaid extension).</p>
+<hr />
+<h2 id="1-platform-ai-integration-flow">1. Platform → AI Integration Flow</h2>
+<p>Shows how an AI request (e.g. "Explain my risk score") travels from the client through the frontend, Quarkus backend, AI Gateway, AI Orchestrator, and Model Serving.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant Client
+    participant Frontend as Frontend (Next.js)
+    participant Backend as Quarkus Backend
+    participant Gateway as AI Gateway
+    participant Orchestrator as AI Orchestrator
+    participant Router as Inference Router
+    participant LLM as LLM Inference Server
+
+    Client-&gt;&gt;Frontend: User action (e.g. &quot;Explain risk score&quot;)
+    Frontend-&gt;&gt;Backend: HTTP POST /api/v1/... (e.g. explain-risk)
+    Backend-&gt;&gt;Backend: Load user context (score, profile)
+    Backend-&gt;&gt;Gateway: POST /ai/explain-risk-score (AIRequest)
+    Gateway-&gt;&gt;Orchestrator: Route by requestType
+    Orchestrator-&gt;&gt;Orchestrator: Build prompt from context
+    Orchestrator-&gt;&gt;Router: POST /v1/completion (prompt, modelId)
+    Router-&gt;&gt;LLM: Forward completion request
+    LLM-&gt;&gt;LLM: Model inference
+    LLM--&gt;&gt;Router: Completion (text)
+    Router--&gt;&gt;Orchestrator: Response (text, usage)
+    Orchestrator--&gt;&gt;Gateway: AIResponse (result.explanation)
+    Gateway--&gt;&gt;Backend: AIResponse
+    Backend--&gt;&gt;Frontend: API response (explanation)
+    Frontend--&gt;&gt;Client: Display explanation
+</code></pre>
+<hr />
+<h2 id="2-ai-gateway-routing-flow">2. AI Gateway Routing Flow</h2>
+<p>Shows how the AI Gateway routes requests to the correct AI service based on <code>requestType</code>. Each service may call Model Serving internally (not expanded here).</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant Backend as Quarkus Backend
+    participant Gateway as AI Gateway
+    participant Orchestrator as AI Orchestrator
+    participant DocIntel as Document Intelligence Service
+    participant Reasoning as Recommendation Reasoning Engine
+    participant Insight as Financial Insight Engine
+
+    Backend-&gt;&gt;Gateway: AIRequest (requestType, contextObject)
+
+    alt requestType = explain_risk_score
+        Gateway-&gt;&gt;Orchestrator: explain_risk_score
+        Orchestrator--&gt;&gt;Gateway: AIResponse (explanation)
+    else requestType = explain_allocation
+        Gateway-&gt;&gt;Orchestrator: explain_allocation
+        Orchestrator--&gt;&gt;Gateway: AIResponse (explanation)
+    else requestType = extract_document
+        Gateway-&gt;&gt;DocIntel: extract_document
+        DocIntel--&gt;&gt;Gateway: AIResponse (entities)
+    else requestType = generate_insight
+        Gateway-&gt;&gt;Insight: generate_financial_insight
+        Insight--&gt;&gt;Gateway: AIResponse (insight)
+    else requestType = recommendation_reasoning
+        Gateway-&gt;&gt;Reasoning: recommendation_reasoning
+        Reasoning--&gt;&gt;Gateway: AIResponse (reasoning)
+    end
+
+    Gateway--&gt;&gt;Backend: AIResponse
+</code></pre>
+<hr />
+<h2 id="3-ai-service-model-serving-flow">3. AI Service → Model Serving Flow</h2>
+<p>Shows how AI services call the Inference Router, which forwards to the appropriate model server (LLM, Embedding, OCR, Document Extraction). Multiple service types are illustrated in parallel for clarity.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant Orchestrator as AI Orchestrator
+    participant DocIntel as Document Intelligence Service
+    participant Insight as Financial Insight Engine
+    participant Router as Inference Router
+    participant LLM as LLM Inference Server
+    participant Embed as Embedding Service
+    participant OCR as OCR Service
+    participant Extract as Document Extraction Service
+
+    Note over Orchestrator,Extract: Completion (explanation / reasoning / insight)
+    Orchestrator-&gt;&gt;Router: POST /v1/completion (modelId, prompt)
+    Router-&gt;&gt;LLM: Forward
+    LLM--&gt;&gt;Router: Generated text
+    Router--&gt;&gt;Orchestrator: Response
+
+    Note over Orchestrator,Extract: Document pipeline (OCR + extraction)
+    DocIntel-&gt;&gt;Router: POST /v1/ocr (document)
+    Router-&gt;&gt;OCR: Forward
+    OCR--&gt;&gt;Router: Text + layout
+    Router--&gt;&gt;DocIntel: OCR result
+    DocIntel-&gt;&gt;Router: POST /v1/extract (text, documentType)
+    Router-&gt;&gt;Extract: Forward
+    Extract--&gt;&gt;Router: Entities + confidence
+    Router--&gt;&gt;DocIntel: Extraction result
+
+    Note over Orchestrator,Extract: Embedding (e.g. RAG)
+    Insight-&gt;&gt;Router: POST /v1/embed (texts)
+    Router-&gt;&gt;Embed: Forward
+    Embed--&gt;&gt;Router: Vectors
+    Router--&gt;&gt;Insight: Vectors
+</code></pre>
+<hr />
+<p><em>Diagrams only. No other files modified. Render in a Mermaid-capable viewer.</em></p>

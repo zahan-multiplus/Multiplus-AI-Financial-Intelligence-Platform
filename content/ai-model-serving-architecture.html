@@ -1,0 +1,231 @@
+<h1 id="multiplus-ai-platform-model-serving-architecture">Multiplus AI Platform — Model Serving Architecture</h1>
+<p><strong>Purpose:</strong> Define the model serving infrastructure that runs all AI models used by the platform. Only AI services (Orchestrator, Document Intelligence, Recommendation Reasoning, Financial Insight) call this layer; the Quarkus backend never interacts with models directly.</p>
+<p><strong>Scope:</strong> Model serving components, runtime architecture, request flow, model management, performance optimization, and observability. Documentation only; no implementation file changes.</p>
+<hr />
+<h2 id="1-model-serving-components">1. Model Serving Components</h2>
+<h3 id="11-llm-inference-server">1.1 LLM Inference Server</h3>
+<p><strong>Purpose:</strong> Load and run large language models (LLMs) and expose a completion API. Accepts prompts (and optional system prompt, stop sequences, max tokens, temperature) and returns generated text. Handles model loading into GPU memory, batching of concurrent requests when supported, and streaming of tokens if the client requests it. One or more instances can serve different model ids (e.g. 7B for explanations, 13B for reasoning) or the same model with different configs. Typical implementations: vLLM, Ollama, TGI (Text Generation Inference), or a custom server wrapping a runtime (e.g. llama.cpp).</p>
+<p><strong>Consumers:</strong> AI Orchestrator, Recommendation Reasoning Engine, Financial Insight Engine, and optionally Document Intelligence (when extraction is LLM-based). All call via a unified completion endpoint (e.g. POST with model id, messages/prompt, parameters).</p>
+<hr />
+<h3 id="12-embedding-service">1.2 Embedding Service</h3>
+<p><strong>Purpose:</strong> Load and run embedding models and expose an embedding API. Accepts text (single or batch) and returns fixed-size vectors. Stateless and typically fast; used for semantic search and RAG. Can run on CPU for moderate QPS or on GPU for higher throughput and lower latency. May expose a single endpoint (e.g. POST /embed with model id and texts) or separate endpoints per model. Typical implementations: sentence-transformers in a small HTTP service, or a dedicated embedding server (e.g. Infinity, FastEmbed, or vendor API).</p>
+<p><strong>Consumers:</strong> Semantic retrieval component, RAG pipeline inside Financial Insight Engine or Document Intelligence. AI services send text(s); Embedding Service returns vectors; consumers then query the vector store.</p>
+<hr />
+<h3 id="13-ocr-service">1.3 OCR Service</h3>
+<p><strong>Purpose:</strong> Accept raw document bytes or a reference (e.g. URL, S3 key) and return extracted text plus optional layout (regions, lines, tables). Used for scanned PDFs and images before document extraction. Can be a single model/engine (e.g. Tesseract, PaddleOCR) or a wrapper around a cloud OCR API. Runs on CPU or GPU depending on the engine; often CPU is sufficient. Exposes an endpoint such as POST /ocr with document payload and optional options (language, output format).</p>
+<p><strong>Consumers:</strong> Document Intelligence Service. It sends document bytes or ref; OCR Service returns text/layout; Document Intelligence then passes output to Document Extraction Service or LLM.</p>
+<hr />
+<h3 id="14-document-extraction-service">1.4 Document Extraction Service</h3>
+<p><strong>Purpose:</strong> Accept document text (and optionally layout) and return structured entities (e.g. holdings, transactions, policy fields). Can be implemented as (1) an LLM call with a strict output schema (same LLM Inference Server with a dedicated extraction prompt/config), or (2) a dedicated extraction model (e.g. NER, layout-aware model) served in a separate process. Exposes an endpoint such as POST /extract with documentType, text, and optional layout. Returns JSON with entities and confidence.</p>
+<p><strong>Consumers:</strong> Document Intelligence Service. It sends OCR output (or raw text for digital PDFs); Document Extraction Service returns entities; Document Intelligence persists or returns them to the Gateway.</p>
+<hr />
+<h3 id="15-model-registry">1.5 Model Registry</h3>
+<p><strong>Purpose:</strong> Store and version model artifacts (weights, config files, tokenizer, optional fine-tuning metadata). Does not run inference. Provides a catalog of model ids and versions (e.g. llama-3-8b-v1, embedding-all-minilm-v1) and a way for inference servers to pull artifacts at startup or on demand. Can be a blob store (S3, GCS) with a manifest/index, or a dedicated registry (MLflow, custom API). Access control and audit (who deployed what, when) can be implemented at this layer.</p>
+<p><strong>Consumers:</strong> LLM Inference Server, Embedding Service, OCR Service, Document Extraction Service (when they load models at startup or on-demand). Deployment pipelines push artifacts to the registry; inference processes pull by model id and version.</p>
+<hr />
+<h3 id="16-inference-router">1.6 Inference Router</h3>
+<p><strong>Purpose:</strong> Single entry point for AI services calling the Model Serving layer. Receives requests with a target (e.g. completion, embed, ocr, extract) and optional model id or endpoint name; routes to the appropriate backend (LLM Inference Server, Embedding Service, OCR Service, Document Extraction Service). Can enforce auth, rate limits, and request validation; add request ids and correlation for tracing; and return a unified error format. Enables A/B routing (e.g. 10% of completion requests to model B) and version selection without AI services knowing individual server URLs. Optionally aggregates metrics (latency, errors, token usage) per route and model.</p>
+<p><strong>Consumers:</strong> All AI services. They call the Inference Router (e.g. HTTP/gRPC) instead of individual servers. Router forwards to the right service and returns the response.</p>
+<hr />
+<h2 id="2-runtime-architecture">2. Runtime Architecture</h2>
+<h3 id="21-gpu-nodes">2.1 GPU Nodes</h3>
+<ul>
+<li><strong>Role:</strong> Run LLM inference and optionally heavy OCR or embedding at scale. Each node has one or more GPUs (e.g. A10, A100, L4) with sufficient VRAM for the target model (e.g. 7B–8B fits on a single 24 GB GPU; 13B may need 40 GB or quantization).</li>
+<li><strong>Deployment:</strong> LLM Inference Server runs in containers (e.g. one pod per model id, or one server managing multiple models with dynamic loading). Kubernetes (or equivalent) schedules pods on GPU nodes; resource limits (nvidia.com/gpu, memory) ensure one model per GPU or a defined share.</li>
+<li><strong>Scaling:</strong> Horizontal: add more GPU nodes and more LLM server replicas; load balancer or Inference Router distributes completion requests. Vertical: use larger GPUs or multi-GPU for a single large model. Autoscaling can be based on request queue depth, GPU utilization, or latency SLO.</li>
+</ul>
+<hr />
+<h3 id="22-cpu-workers">2.2 CPU Workers</h3>
+<ul>
+<li><strong>Role:</strong> Run embedding service, OCR service, and tabular ML (future). No GPU required; lower cost per node. Suitable for stateless, batch-friendly or low-latency small models.</li>
+<li><strong>Deployment:</strong> Embedding Service and OCR Service run in containers on CPU-only nodes. Document Extraction Service (when not LLM-based) can run here. Multiple replicas behind a load balancer or via the Inference Router.</li>
+<li><strong>Scaling:</strong> Horizontal scaling by adding replicas; CPU utilization or request rate can drive autoscaling.</li>
+</ul>
+<hr />
+<h3 id="23-containerized-inference">2.3 Containerized Inference</h3>
+<ul>
+<li><strong>Principle:</strong> Each inference component (LLM server, Embedding Service, OCR Service, Document Extraction Service) runs in its own container image. Images include the runtime (Python, CUDA, etc.), the serving code, and optionally a default model; model weights can be loaded from the Model Registry at startup to keep images small and models versioned separately.</li>
+<li><strong>Orchestration:</strong> Kubernetes (or similar) manages deployment, health checks, and resource limits. Same cluster can host GPU and CPU node pools; pods are scheduled on the appropriate pool based on resource requests (e.g. nvidia.com/gpu: 1 for LLM).</li>
+<li><strong>Isolation:</strong> Failure or high load in one component (e.g. LLM) does not bring down embedding or OCR; each service scales and restarts independently.</li>
+</ul>
+<hr />
+<h3 id="24-model-loading">2.4 Model Loading</h3>
+<ul>
+<li><strong>At startup:</strong> Inference servers read config (e.g. model id and version, or path in registry). They pull artifacts from the Model Registry (or mount a pre-populated volume) and load the model into memory/VRAM. Startup time can be 30 s to several minutes for large LLMs; readiness probes should wait until loading is complete.</li>
+<li><strong>On-demand (optional):</strong> For many models with low QPS, servers can load models on first request and cache them; this reduces idle GPU usage but adds latency to the first request. Preloading is preferred for high-traffic models.</li>
+<li><strong>Multiple models:</strong> A single LLM server process can host one model; alternatively, a server can support multiple model ids and load them on demand or keep a subset in memory, depending on VRAM and traffic.</li>
+</ul>
+<hr />
+<h3 id="25-scaling">2.5 Scaling</h3>
+<ul>
+<li><strong>LLM:</strong> Scale out by adding more replicas of the LLM Inference Server; each replica can serve the same model id. Inference Router or load balancer distributes requests. Queue-based backpressure (e.g. reject or queue when all replicas are busy) prevents overload.</li>
+<li><strong>Embedding / OCR / Extraction:</strong> Scale out by adding more CPU replicas. Stateless design allows any replica to handle any request.</li>
+<li><strong>Autoscaling:</strong> Use HPA (Kubernetes Horizontal Pod Autoscaler) or similar on CPU/GPU utilization or custom metrics (e.g. request latency, queue depth). Scale-in should be gradual to avoid dropping in-flight requests.</li>
+</ul>
+<hr />
+<h3 id="26-how-ai-services-call-model-servers">2.6 How AI Services Call Model Servers</h3>
+<ul>
+<li><strong>Unified path:</strong> AI services do not call LLM or Embedding servers directly. They call the <strong>Inference Router</strong> at a fixed base URL (e.g. internal DNS or load balancer). Request body specifies operation type (completion, embed, ocr, extract) and parameters (model id, prompt, texts, document, etc.). Router forwards to the appropriate backend and returns the response.</li>
+<li><strong>Protocol:</strong> HTTP REST or gRPC. Same as used between AI Gateway and AI services; only the Router talks to the individual inference services. Auth can be service-to-service (e.g. JWT or network policy); no user tokens at the model layer.</li>
+<li><strong>Failure handling:</strong> Timeouts and retries are configured at the AI service or Router level. Router returns a structured error (e.g. 503, timeout) so AI services can degrade (e.g. no explanation) or retry.</li>
+</ul>
+<hr />
+<h2 id="3-request-flow">3. Request Flow</h2>
+<h3 id="31-completion-explanation-reasoning-insight">3.1 Completion (Explanation, Reasoning, Insight)</h3>
+<ol>
+<li><strong>AI Orchestrator</strong> (or Recommendation Reasoning / Financial Insight Engine) builds a prompt and decides it needs an LLM completion. It sends a request to the <strong>Inference Router</strong>: e.g. <code>POST /v1/completion</code> with body <code>{ "modelId": "llama-3-8b-v1", "prompt": "...", "maxTokens": 512, "temperature": 0.3 }</code>.</li>
+<li><strong>Inference Router</strong> validates the request, optionally applies A/B or version routing (e.g. map <code>llama-3-8b-v1</code> to backend pool), adds request id and correlation id, and forwards to the <strong>LLM Inference Server</strong> (e.g. POST to the server’s completion endpoint). If multiple replicas exist, Router or load balancer selects one.</li>
+<li><strong>LLM Inference Server</strong> loads the model (if not already loaded), runs inference, and returns generated text (or stream of tokens). Response includes tokens generated, stop reason, and optional usage metadata.</li>
+<li><strong>Inference Router</strong> receives the response, optionally logs metrics (latency, tokens), and returns to the <strong>AI Orchestrator</strong> in a unified shape (e.g. <code>{ "text": "...", "modelId": "...", "usage": { "promptTokens", "completionTokens" } }</code>).</li>
+<li><strong>AI Orchestrator</strong> uses the text in the AIResponse result and returns to the AI Gateway.</li>
+</ol>
+<hr />
+<h3 id="32-embedding">3.2 Embedding</h3>
+<ol>
+<li><strong>Semantic retrieval / RAG component</strong> needs vectors for a query or a set of texts. It sends a request to the <strong>Inference Router</strong>: e.g. <code>POST /v1/embed</code> with body <code>{ "modelId": "embed-all-minilm-v1", "texts": ["..."] }</code>.</li>
+<li><strong>Inference Router</strong> forwards to the <strong>Embedding Service</strong>.</li>
+<li><strong>Embedding Service</strong> returns vectors (e.g. list of float arrays).</li>
+<li><strong>Inference Router</strong> returns them to the caller. Caller then queries the vector store or uses vectors in an LLM prompt.</li>
+</ol>
+<hr />
+<h3 id="33-document-ocr-extraction">3.3 Document (OCR + Extraction)</h3>
+<ol>
+<li><strong>Document Intelligence Service</strong> has a document to process. It first calls the <strong>Inference Router</strong>: e.g. <code>POST /v1/ocr</code> with document bytes or ref. Router forwards to <strong>OCR Service</strong>; OCR Service returns text and layout.</li>
+<li><strong>Document Intelligence Service</strong> then calls the Router again: e.g. <code>POST /v1/extract</code> with <code>documentType</code>, <code>text</code>, and optional layout. Router forwards to <strong>Document Extraction Service</strong> (or to LLM completion with extraction prompt). Document Extraction returns entities and confidence.</li>
+<li><strong>Document Intelligence Service</strong> aggregates results and returns to the AI Gateway; Gateway or backend persists entities.</li>
+</ol>
+<hr />
+<h3 id="34-flow-summary">3.4 Flow Summary</h3>
+<pre><code>AI Orchestrator / Recommendation Reasoning / Financial Insight
+    → Inference Router (POST /v1/completion)
+        → LLM Inference Server
+            → Model (e.g. LLaMA 8B)
+
+Semantic retrieval / RAG
+    → Inference Router (POST /v1/embed)
+        → Embedding Service
+            → Embedding model
+
+Document Intelligence
+    → Inference Router (POST /v1/ocr) → OCR Service → OCR model
+    → Inference Router (POST /v1/extract) → Document Extraction Service → Extraction model or LLM
+</code></pre>
+<p>Responses flow back along the same path; Router does not modify response body except to wrap in a common envelope if desired (e.g. add requestId, modelId, latency).</p>
+<hr />
+<h2 id="4-model-management">4. Model Management</h2>
+<h3 id="41-model-versioning">4.1 Model Versioning</h3>
+<ul>
+<li><strong>Scheme:</strong> Each model has an id (e.g. <code>llama-3-8b</code>) and a version (e.g. <code>v1</code>, <code>v2</code>) or a full tag (e.g. <code>llama-3-8b-20250307</code>). The Model Registry stores artifacts per (model id, version). Inference servers and the Router resolve <code>modelId</code> to a concrete artifact and optional backend.</li>
+<li><strong>Immutability:</strong> Published versions are immutable. New training or config changes produce a new version. This allows repeatable deployments and rollback to a known version.</li>
+<li><strong>Metadata:</strong> Registry can store metadata per version: creation time, training config, metrics (e.g. eval loss), and compliance or approval flags for production use.</li>
+</ul>
+<hr />
+<h3 id="42-deployment-of-new-models">4.2 Deployment of New Models</h3>
+<ul>
+<li><strong>Build and push:</strong> Training or procurement pipeline produces model artifacts (weights, config, tokenizer). Artifacts are pushed to the Model Registry with a new version tag.</li>
+<li><strong>Deploy:</strong> Deployment pipeline (e.g. CI/CD) updates the inference server config or Kubernetes manifest to use the new version (e.g. <code>MODEL_VERSION=v2</code>). New pods are rolled out (see rolling upgrade). Router config is updated if the new model is exposed under a new id or replaces an existing id.</li>
+<li><strong>Smoke test:</strong> After deploy, automated tests send sample requests to the Router and assert on response shape and basic quality. Optional canary: route a small percentage of traffic to the new version and compare metrics.</li>
+</ul>
+<hr />
+<h3 id="43-rolling-upgrades">4.3 Rolling Upgrades</h3>
+<ul>
+<li><strong>Process:</strong> New replicas (pods) with the new model version are started. They are added to the load balancer or Router backend pool after readiness. Old replicas are drained (no new requests) and terminated. Request draining and graceful shutdown (finish in-flight requests) prevent user-visible errors.</li>
+<li><strong>Pace:</strong> Roll out one or a few replicas at a time; wait for health and latency to stabilize before continuing. Rollback if error rate or latency exceeds a threshold.</li>
+<li><strong>Zero-downtime:</strong> With multiple replicas, the service remains available throughout the rollout. Single-replica deployments will have a short unavailability during replacement unless a blue-green or canary strategy is used.</li>
+</ul>
+<hr />
+<h3 id="44-rollback-strategy">4.4 Rollback Strategy</h3>
+<ul>
+<li><strong>Trigger:</strong> Rollback when error rate, latency, or quality metrics (e.g. user feedback, automated checks) degrade after a new version. Can be manual or automated (e.g. revert if p99 latency &gt; 2x baseline for 5 minutes).</li>
+<li><strong>Mechanism:</strong> Revert the deployment config to the previous model version and trigger a new rollout. Previous version artifacts remain in the Model Registry so that inference servers can load them again. Router or service config is reverted so that traffic goes to the old version.</li>
+<li><strong>Data:</strong> No request/response data is stored in the inference layer for rollback; only config and artifact version change. AI services and Gateway may log model id for analysis so that bad versions can be identified post hoc.</li>
+</ul>
+<hr />
+<h2 id="5-performance-optimization">5. Performance Optimization</h2>
+<h3 id="51-request-batching">5.1 Request Batching</h3>
+<ul>
+<li><strong>Embedding:</strong> Embedding Service can accept a batch of texts in one request and return a batch of vectors. AI services or a batching middleware can collect multiple embed requests (e.g. over a short window) and send one batch to reduce overhead and improve GPU/CPU utilization. Trade-off: slightly higher latency for the first request in a batch.</li>
+<li><strong>LLM:</strong> Some runtimes (e.g. vLLM) support continuous batching: multiple requests are batched in the same forward pass when their sequences fit. This increases GPU utilization and throughput. No change required at the AI service if the LLM server handles batching internally; otherwise, a dedicated batching proxy in front of the LLM server can aggregate completion requests.</li>
+</ul>
+<hr />
+<h3 id="52-streaming-responses">5.2 Streaming Responses</h3>
+<ul>
+<li><strong>LLM:</strong> Completion endpoint can support Server-Sent Events (SSE) or chunked transfer: tokens are streamed as they are generated. Reduces time-to-first-token and improves perceived latency for long answers. AI services can either (1) stream through to the Gateway and client, or (2) consume the full stream and then return a single response. Router passes through streaming responses; no buffering of full body required.</li>
+<li><strong>Other services:</strong> Embedding and OCR typically return a single response; no streaming. Document extraction returns one JSON payload.</li>
+</ul>
+<hr />
+<h3 id="53-gpu-utilization">5.3 GPU Utilization</h3>
+<ul>
+<li><strong>Batching:</strong> As above; continuous batching for LLM increases GPU utilization.</li>
+<li><strong>Quantization:</strong> INT8 or INT4 quantization reduces memory and can increase throughput per GPU so that more concurrent requests are served.</li>
+<li><strong>Kernel optimization:</strong> Use optimized kernels (e.g. FlashAttention, CUDA graphs) when supported by the runtime to reduce latency and improve utilization.</li>
+<li><strong>Sizing:</strong> Right-size GPU allocation per model (e.g. one 7B model per 24 GB GPU) so that memory is used efficiently and multiple replicas can share a node if needed.</li>
+</ul>
+<hr />
+<h3 id="54-caching-strategies">5.4 Caching Strategies</h3>
+<ul>
+<li><strong>Embedding cache:</strong> Repeated identical texts (e.g. same product description, same insight template) can be cached by (hash of text, model id) and the cached vector returned without calling the Embedding Service. Cache can live in the AI service or in a small cache layer next to the Router.</li>
+<li><strong>LLM cache:</strong> Optional prompt/response cache for identical prompts (e.g. same risk score and band). Useful for pre-generated explanations that are read multiple times. Cache key: hash of (model id, prompt, params). TTL can be short (e.g. 1 hour) to allow model or data updates.</li>
+<li><strong>Model output cache:</strong> Document extraction results for the same document id can be cached so that repeated requests (e.g. retries) do not re-run OCR and extraction. Invalidate on document replace or version change.</li>
+</ul>
+<hr />
+<h2 id="6-observability">6. Observability</h2>
+<h3 id="61-model-latency">6.1 Model Latency</h3>
+<ul>
+<li><strong>Metrics:</strong> Each inference component (or the Inference Router) records request latency (e.g. time from request received to response sent). Report percentiles (p50, p95, p99) and histogram per (endpoint, model id, optional version). Export to a metrics system (e.g. Prometheus, CloudWatch).</li>
+<li><strong>SLO:</strong> Define latency SLOs per operation (e.g. completion p95 &lt; 5 s, embed p95 &lt; 100 ms). Alert when latency exceeds threshold. Dashboards show latency by model and by AI service caller.</li>
+</ul>
+<hr />
+<h3 id="62-error-rates">6.2 Error Rates</h3>
+<ul>
+<li><strong>Metrics:</strong> Count of requests that return 4xx/5xx or timeout per (endpoint, model id, error type). Error rate = errors / total requests over a window. Alert on elevated error rate or a spike in timeouts.</li>
+<li><strong>Logging:</strong> Log request id, model id, error code, and optional message for failed requests. Avoid logging full prompts or responses in production; use sampling or redaction if needed for debugging.</li>
+</ul>
+<hr />
+<h3 id="63-token-usage">6.3 Token Usage</h3>
+<ul>
+<li><strong>LLM:</strong> LLM Inference Server (or Router) reports prompt tokens and completion tokens per request. Aggregate by (model id, caller, date) for cost and usage analysis. Store in metrics or a dedicated usage store. Optional: expose a usage API for billing or quotas.</li>
+<li><strong>Embedding:</strong> Report number of input tokens or text count per request; optional vector dimension. Used for capacity planning and cost attribution.</li>
+</ul>
+<hr />
+<h3 id="64-model-version-usage">6.4 Model Version Usage</h3>
+<ul>
+<li><strong>Tracking:</strong> Every request to the Router (or to each server) should include or record the resolved model id and version. Log or metric: (model id, version) per request or per batch. Enables: (1) A/B analysis (compare latency and errors across versions), (2) rollback impact (which traffic was on the bad version), (3) deprecation (traffic per version before retiring).</li>
+<li><strong>AIResponse:</strong> The AI Gateway can include <code>modelUsed</code> in the response (from the inference layer) so that the backend or client can log it for user-facing requests and support debugging.</li>
+</ul>
+<hr />
+<h3 id="65-summary-of-observability">6.5 Summary of Observability</h3>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>What to track</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model latency</td>
+<td>p50/p95/p99 per endpoint, model id</td>
+<td>Router or each inference service; export to Prometheus/CloudWatch</td>
+</tr>
+<tr>
+<td>Error rates</td>
+<td>Count of errors and timeouts per endpoint, model id</td>
+<td>Same</td>
+</tr>
+<tr>
+<td>Token usage</td>
+<td>Prompt + completion tokens per request; aggregate by model, caller, date</td>
+<td>LLM server or Router; optional usage store</td>
+</tr>
+<tr>
+<td>Model version usage</td>
+<td>Resolved model id and version per request</td>
+<td>Router or server; logs and metrics</td>
+</tr>
+</tbody>
+</table>
+<p>Alerts: latency SLO breach, error rate spike, and optional token budget. Dashboards: latency by model, error rate by model, token usage over time, and version distribution.</p>
+<hr />
+<p><em>This document defines the model serving infrastructure only. No implementation files are modified.</em></p>

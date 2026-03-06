@@ -1,0 +1,193 @@
+<h1 id="multiplus-ai-platform-ai-workflow-diagrams">Multiplus AI Platform — AI Workflow Diagrams</h1>
+<p><strong>Purpose:</strong> Sequence diagrams for the main AI feature workflows. These show the step-by-step flow through frontend, backend, AI Gateway, AI services, and Model Serving. Infrastructure is described in earlier architecture docs.</p>
+<p><strong>Format:</strong> Mermaid sequence diagrams. Render in a Mermaid-capable Markdown viewer.</p>
+<hr />
+<h2 id="1-risk-explanation-workflow">1. Risk Explanation Workflow</h2>
+<p>End-to-end flow when the user requests an explanation of their risk score. The backend loads the financial profile, sends an explain request to the AI Gateway, and the Orchestrator uses the LLM to generate the explanation.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant Client
+    participant Frontend as Frontend (Next.js)
+    participant Backend as Quarkus Backend
+    participant Gateway as AI Gateway
+    participant Orchestrator as AI Orchestrator
+    participant Router as Inference Router
+    participant LLM as LLM Inference Server
+
+    Client-&gt;&gt;Frontend: Request &quot;Explain my risk score&quot;
+    Frontend-&gt;&gt;Backend: GET/POST explain risk (userId)
+
+    Backend-&gt;&gt;Backend: Load FinancialProfile (riskScore, riskBand, components)
+    Backend-&gt;&gt;Gateway: POST /ai/explain-risk-score (AIRequest, contextObject=FinancialProfile)
+
+    Gateway-&gt;&gt;Orchestrator: Route explain_risk_score
+    Orchestrator-&gt;&gt;Orchestrator: Build prompt from FinancialProfile
+    Orchestrator-&gt;&gt;Router: POST /v1/completion (prompt, modelId)
+
+    Router-&gt;&gt;LLM: Completion request
+    LLM-&gt;&gt;LLM: Generate explanation text
+    LLM--&gt;&gt;Router: Completion (explanation)
+
+    Router--&gt;&gt;Orchestrator: Response (text)
+    Orchestrator--&gt;&gt;Gateway: AIResponse (result.explanation)
+    Gateway--&gt;&gt;Backend: AIResponse
+
+    Backend--&gt;&gt;Frontend: API response (explanation)
+    Frontend--&gt;&gt;Client: Display risk explanation
+</code></pre>
+<hr />
+<h2 id="2-allocation-reasoning-workflow">2. Allocation Reasoning Workflow</h2>
+<p>The platform computes allocation and matching funds; AI only generates the reasoning text. Backend calls AssetAllocationService first, then sends the result to the AI Gateway for explanation.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant Client
+    participant Frontend as Frontend (Next.js)
+    participant Backend as Quarkus Backend
+    participant Allocation as AssetAllocationService
+    participant Gateway as AI Gateway
+    participant Reasoning as Recommendation Reasoning Engine
+    participant Router as Inference Router
+    participant LLM as LLM Inference Server
+
+    Client-&gt;&gt;Frontend: Request allocation + &quot;Why these funds?&quot;
+    Frontend-&gt;&gt;Backend: Get allocation with explanation (userId)
+
+    Backend-&gt;&gt;Allocation: getAllocation(userId)
+    Allocation-&gt;&gt;Allocation: Load UserRiskScore, RiskAssetAllocationConfig
+    Allocation-&gt;&gt;Allocation: Compute allocation + matching funds (deterministic)
+    Allocation--&gt;&gt;Backend: allocation, recommendedFunds
+
+    Backend-&gt;&gt;Backend: Build context (FinancialProfile + Recommendation)
+    Backend-&gt;&gt;Gateway: POST /ai/recommendation-reasoning (AIRequest, contextObject)
+
+    Gateway-&gt;&gt;Reasoning: Route recommendation_reasoning
+    Reasoning-&gt;&gt;Reasoning: Build prompt (allocation, funds, profile)
+    Reasoning-&gt;&gt;Router: POST /v1/completion (prompt, modelId)
+
+    Router-&gt;&gt;LLM: Completion request
+    LLM-&gt;&gt;LLM: Generate reasoning text
+    LLM--&gt;&gt;Router: Completion (reasoning)
+
+    Router--&gt;&gt;Reasoning: Response (text)
+    Reasoning--&gt;&gt;Gateway: AIResponse (result.reasoning)
+    Gateway--&gt;&gt;Backend: AIResponse
+
+    Backend-&gt;&gt;Backend: Attach reasoning to allocation response
+    Backend--&gt;&gt;Frontend: allocation + recommendedFunds + reasoning
+    Frontend--&gt;&gt;Client: Display allocation and explanation
+</code></pre>
+<hr />
+<h2 id="3-document-extraction-workflow">3. Document Extraction Workflow</h2>
+<p>User has uploaded a document; the backend requests extraction. Document Intelligence runs OCR, then extraction, and returns structured entities.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant Client
+    participant Frontend as Frontend (Next.js)
+    participant Backend as Quarkus Backend
+    participant Gateway as AI Gateway
+    participant DocIntel as Document Intelligence Service
+    participant Router as Inference Router
+    participant OCR as OCR Service
+    participant Extract as Document Extraction Service
+
+    Client-&gt;&gt;Frontend: Request extract document (documentId)
+    Frontend-&gt;&gt;Backend: POST extract document (documentId, documentType)
+
+    Backend-&gt;&gt;Backend: Resolve storageKey (e.g. S3) for documentId
+    Backend-&gt;&gt;Gateway: POST /ai/extract-document (AIRequest, contextObject: documentId, documentType, storageKey)
+
+    Gateway-&gt;&gt;DocIntel: Route extract_document
+
+    DocIntel-&gt;&gt;Router: POST /v1/ocr (document ref / bytes)
+    Router-&gt;&gt;OCR: Forward
+    OCR-&gt;&gt;OCR: Run OCR on document
+    OCR--&gt;&gt;Router: Text + layout
+    Router--&gt;&gt;DocIntel: OCR result
+
+    DocIntel-&gt;&gt;Router: POST /v1/extract (documentType, text, layout)
+    Router-&gt;&gt;Extract: Forward
+    Extract-&gt;&gt;Extract: Extract entities (e.g. holdings, transactions)
+    Extract--&gt;&gt;Router: Entities + confidence
+    Router--&gt;&gt;DocIntel: Extraction result
+
+    DocIntel--&gt;&gt;Gateway: AIResponse (result.entities, result.confidence)
+    Gateway--&gt;&gt;Backend: AIResponse
+
+    Backend-&gt;&gt;Backend: Store extracted entities (DB / API)
+    Backend--&gt;&gt;Frontend: Structured extraction result
+    Frontend--&gt;&gt;Client: Display extracted data
+</code></pre>
+<hr />
+<h2 id="4-portfolio-insight-workflow">4. Portfolio Insight Workflow</h2>
+<p>User requests a portfolio insight (or the UI loads the insight). Backend loads portfolio and profile, then the Financial Insight Engine generates narrative insight via the LLM.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant Client
+    participant Frontend as Frontend (Next.js)
+    participant Backend as Quarkus Backend
+    participant Portfolio as Portfolio Service
+    participant Gateway as AI Gateway
+    participant Insight as Financial Insight Engine
+    participant Router as Inference Router
+    participant LLM as LLM Inference Server
+
+    Client-&gt;&gt;Frontend: Request portfolio insight (or load dashboard)
+    Frontend-&gt;&gt;Backend: GET portfolio insight (userId)
+
+    Backend-&gt;&gt;Portfolio: getPortfolio(userId)
+    Portfolio--&gt;&gt;Backend: Portfolio (holdings, allocation, value)
+    Backend-&gt;&gt;Backend: Load FinancialProfile (userId)
+    Backend-&gt;&gt;Backend: Build context (FinancialProfile + Portfolio)
+
+    Backend-&gt;&gt;Gateway: POST /ai/generate-insight (AIRequest, contextObject)
+
+    Gateway-&gt;&gt;Insight: Route generate_financial_insight
+    Insight-&gt;&gt;Insight: Build prompt (profile + portfolio context)
+    Insight-&gt;&gt;Router: POST /v1/completion (prompt, modelId)
+
+    Router-&gt;&gt;LLM: Completion request
+    LLM-&gt;&gt;LLM: Generate insight narrative
+    LLM--&gt;&gt;Router: Completion (insight text)
+
+    Router--&gt;&gt;Insight: Response (text)
+    Insight--&gt;&gt;Gateway: AIResponse (result.insight)
+    Gateway--&gt;&gt;Backend: AIResponse
+
+    Backend--&gt;&gt;Frontend: API response (insight)
+    Frontend--&gt;&gt;Client: Display portfolio insight
+</code></pre>
+<hr />
+<h2 id="5-trigger-engine-workflow">5. Trigger Engine Workflow</h2>
+<p>Asynchronous flow: the backend publishes a domain event (e.g. RiskScoreComputed); the Trigger Engine consumes it, runs an AI workflow via the AI Gateway, and stores the result (e.g. cached explanation). No synchronous client request.</p>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant Backend as Quarkus Backend
+    participant Bus as Event Bus / Queue
+    participant Trigger as Trigger Engine
+    participant Gateway as AI Gateway
+    participant Service as AI Service (e.g. Orchestrator)
+    participant Model as Model Serving (LLM)
+
+    Note over Backend: User risk score computed and persisted
+    Backend-&gt;&gt;Backend: UserRiskOrchestrationService persists UserRiskScore
+    Backend-&gt;&gt;Bus: Publish TriggerEvent (RiskScoreComputed, userId, riskScore, riskBand, payload)
+
+    Trigger-&gt;&gt;Bus: Consume event
+    Trigger-&gt;&gt;Trigger: Deduplicate (eventType, entityId)
+    Trigger-&gt;&gt;Trigger: Build AIRequest (explain_risk_score, contextObject from payload)
+
+    Trigger-&gt;&gt;Gateway: POST /ai/explain-risk-score (AIRequest)
+    Gateway-&gt;&gt;Service: Route to Orchestrator
+    Service-&gt;&gt;Service: Build prompt from context
+    Service-&gt;&gt;Model: Completion request
+    Model--&gt;&gt;Service: Explanation text
+    Service--&gt;&gt;Gateway: AIResponse (result.explanation)
+    Gateway--&gt;&gt;Trigger: AIResponse
+
+    Trigger-&gt;&gt;Trigger: Store result (e.g. explanation cache keyed by userId)
+    Trigger-&gt;&gt;Bus: Ack message
+
+    Note over Trigger: Later: user requests &quot;Explain risk&quot; → Backend reads from cache
+</code></pre>
+<hr />
+<p><em>Workflow diagrams only. No other files modified. Render in a Mermaid-capable viewer.</em></p>

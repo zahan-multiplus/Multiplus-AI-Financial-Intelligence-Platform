@@ -1,0 +1,219 @@
+<h1 id="multiplus-ai-financial-intelligence-platform-technical-architecture-review">Multiplus AI Financial Intelligence Platform — Technical Architecture Review</h1>
+<p><strong>Document:</strong> Deep technical architecture review of the intended future architecture.<br />
+<strong>Scope:</strong> All documentation under <code>content/*.html</code> and referenced diagrams.<br />
+<strong>Purpose:</strong> Evaluate technical soundness, internal consistency, and feasibility before diagram generation or implementation.</p>
+<hr />
+<h2 id="1-architecture-strengths">1. Architecture Strengths</h2>
+<h3 id="11-clear-real-system-architecture-and-phased-evolution">1.1 Clear Real System Architecture and Phased Evolution</h3>
+<p><strong>Reference:</strong> AI Platform Design → <em>Multiplus AI Integration Architecture and Phased Evolution</em> (s-5-1-8), <em>Real System Architecture</em> (s-5-1-8-1).</p>
+<p>The documented flow (Frontend → Quarkus Backend → AI Modules → Model Serving Layer → Self-hosted AI Models) clearly separates orchestration (backend), AI logic (modules), and inference (model server). Phased evolution (Phase 1: explanations/OCR; Phase 2: RAG; Phase 3: advanced agents) is explicit and reduces initial scope risk.</p>
+<h3 id="12-layered-system-and-data-flow">1.2 Layered System and Data Flow</h3>
+<p><strong>Reference:</strong> System Overview → <em>High Level System Architecture</em> (s-3-3); System Architecture → <em>Overall Platform Architecture</em> (s-4-1), <em>End-to-End System Flow</em> (s-4-1-3), <em>AI Intelligence Processing</em> (s-4-1-6).</p>
+<p>Responsibilities are layered: User → Platform Services → AI Intelligence → Data Infrastructure → External Sources. End-to-end and AI intelligence flows are described and supported by diagrams (<code>end-to-end-system-flow.svg</code>, <code>ai-intelligence-processing.svg</code>), aiding consistency.</p>
+<h3 id="13-recommendation-pipeline-completeness">1.3 Recommendation Pipeline Completeness</h3>
+<p><strong>Reference:</strong> Recommendation Engine → <em>Recommendation Generation Logic</em> (s-10-9), <em>Suitability Checks</em> (s-10-10), <em>Recommendation Explainability</em> (s-10-11).</p>
+<p>The pipeline is defined from profile/risk/portfolio through allocation, ranking, filtering, suitability validation, and explainability. A single end-to-end diagram (<code>recommendation-generation.svg</code>) ties these stages. Suitability rules (risk alignment, allocation limits, concentration, diversification, liquidity, regulatory) and explanation sources are specified.</p>
+<h3 id="14-compliance-and-recommendation-validation">1.4 Compliance and Recommendation Validation</h3>
+<p><strong>Reference:</strong> Compliance → <em>Compliance Engine Architecture</em> (s-12-4), <em>Risk Alignment Checks</em> (s-12-3); Recommendation Engine → <em>Suitability Checks</em> (s-10-10).</p>
+<p>The compliance engine is placed between the recommendation engine and user delivery, with rule repository, evaluation engine, policy enforcement, product/portfolio validation, and audit logging. Risk alignment checks (portfolio risk, allocation limits, stress scenarios) are described. Overlap with Recommendation Engine suitability is acknowledged implicitly (both validate recommendations) but the boundary is usable.</p>
+<h3 id="15-data-architecture-and-validation">1.5 Data Architecture and Validation</h3>
+<p><strong>Reference:</strong> Data Architecture → <em>Data Ingestion Pipelines</em> (s-6-4), <em>Data Validation and Quality Checks</em> (s-6-5), <em>Data Storage Strategy</em> (s-6-6).</p>
+<p>Ingestion types (batch, streaming, event-driven, document) and pipeline components (connectors, validation, transformation, orchestration) are defined. Validation covers schema, completeness, value, consistency, and anomaly detection. Storage layers (raw/Data Lake → processed → Feature Store → Vector DB) support analytical and ML workloads.</p>
+<h3 id="16-trigger-framework-structure">1.6 Trigger Framework Structure</h3>
+<p><strong>Reference:</strong> AI Triggers → <em>Trigger Framework</em> (s-13-1), <em>Trigger Processing Architecture</em> (s-13-1-4).</p>
+<p>Event-driven flow is explicit: Event Sources → Trigger Detection → (Deduplication) → AI Workflow Dispatcher → AI Modules. Deduplication, failure handling (retries, logging, fallback), and trigger types (user, data-driven, market, scheduled) are listed. Diagram <code>trigger-processing.svg</code> supports the description.</p>
+<h3 id="17-agent-design-and-tool-based-architecture">1.7 Agent Design and Tool-Based Architecture</h3>
+<p><strong>Reference:</strong> AI Agent Architecture → <em>AI Agent Concept</em> (s-9-1), <em>Tool-Based Agent Architecture</em> (s-9-1-8), <em>Context Builder</em> (s-9-4), <em>Tool Invocation Layer</em> (s-9-6).</p>
+<p>Agents are positioned as orchestrators (context retrieval, tool invocation, LLM synthesis). Context Builder, Prompt Generation, Tool Invocation Layer, Output Structuring, Memory, Decision Logic, and Failure Handling are all present. Diagram <code>agent-reasoning-workflow.svg</code> aligns with the described workflow.</p>
+<h3 id="18-model-strategy-breadth">1.8 Model Strategy Breadth</h3>
+<p><strong>Reference:</strong> Model Strategy → <em>Model Requirements</em> (s-8-1), <em>Model Selection Strategy</em> (s-8-3), <em>Model Deployment Strategy</em> (s-8-6), <em>Model Evaluation Criteria</em> (s-8-5).</p>
+<p>Requirements span accuracy, interpretability, privacy, real-time, monitoring, and scalability. Selection is task-oriented (structured, document, embedding, LLM, hybrid) with evaluation and lifecycle mentioned. Deployment covers serving, real-time/batch, containerization, versioning, registry, monitoring, A/B testing, and security. Open-source LLM options (LLaMA, Mistral, Mixtral) and RAG are addressed.</p>
+<h3 id="19-security-and-infrastructure-coverage">1.9 Security and Infrastructure Coverage</h3>
+<p><strong>Reference:</strong> Security → <em>Security Overview</em> (s-16-1), <em>Data Encryption</em> (s-16-2), <em>Access Control</em> (s-16-3), <em>Model Security</em> (s-16-5); Infrastructure → <em>Infrastructure Overview</em> (s-15-1), <em>Compute/GPU/Storage/Networking</em> (s-15-2–s-15-5).</p>
+<p>Security layers (application, data, infrastructure, network, AI), threat model, IAM, encryption, and model access control are described. Infrastructure covers compute, GPU, storage, networking, containerization, scaling, and cost optimization.</p>
+<h3 id="110-document-intelligence-and-phase-1-flows">1.10 Document Intelligence and Phase 1 Flows</h3>
+<p><strong>Reference:</strong> Document Intelligence → <em>OCR Pipeline Architecture</em> (s-11-5); AI Platform → Phase 1 diagrams.</p>
+<p>OCR pipeline and Phase 1 document flow are described and supported by <code>document-ocr-processing.svg</code>. Phase 1 explanation flows (risk score, portfolio recommendation) have dedicated diagrams and are referenced from both System Architecture and Recommendation Engine.</p>
+<hr />
+<h2 id="2-architecture-weaknesses">2. Architecture Weaknesses</h2>
+<h3 id="21-unclear-boundary-between-suitability-and-compliance-engine">2.1 Unclear Boundary Between Suitability and Compliance Engine</h3>
+<p><strong>Reference:</strong> Recommendation Engine → <em>Suitability Checks</em> (s-10-10); Compliance → <em>Compliance Engine Architecture</em> (s-12-4).</p>
+<p>Both perform recommendation validation (risk alignment, allocation limits, product eligibility). The doc does not state whether suitability is a subset of the compliance engine, a separate pre-step, or the same component under two names. This can lead to duplicate rules or unclear ownership of “reject vs adjust” behavior.</p>
+<h3 id="22-data-extraction-vs-data-ingestion-vs-data-architecture">2.2 Data Extraction vs Data Ingestion vs Data Architecture</h3>
+<p><strong>Reference:</strong> AI Platform → <em>Data Extraction Module</em> (s-5-3), <em>Data Ingestion Module</em> (s-5-5); Data Architecture → <em>Data Ingestion Pipelines</em> (s-6-4).</p>
+<p>Data Extraction is an AI platform module; Data Ingestion is both an AI module and a data-architecture pipeline concept. Whether “Data Ingestion” in the AI platform is the same as the pipelines in Data Architecture, or an orchestrator that calls them, is not defined. Overlap in naming and responsibility may cause confusion.</p>
+<h3 id="23-triggerworkflow-mapping-not-fully-specified">2.3 Trigger–Workflow Mapping Not Fully Specified</h3>
+<p><strong>Reference:</strong> AI Triggers → <em>AI Workflow Dispatcher</em> (s-13-1-6), <em>Supported AI Workflows</em> (s-13-1-7).</p>
+<p>The dispatcher “routes the trigger event to the appropriate analytical module” but the mapping from trigger types (or event payloads) to specific workflows/modules is not specified. Which events map to profile update vs portfolio analysis vs recommendation vs document processing is described only by example, not as a defined contract.</p>
+<h3 id="24-agent-vs-phase-1-backend-ai-module">2.4 Agent vs Phase 1 Backend AI Module</h3>
+<p><strong>Reference:</strong> AI Platform → <em>Backend AI Module</em> (s-5-1-8-2); AI Agent Architecture → <em>AI Agent Concept</em> (s-9-1).</p>
+<p>Phase 1 is described as “risk explanation, portfolio recommendation explanation, document intelligence pipelines” without an agent. Agents are described as orchestrators with context builder and tools. It is unclear whether Phase 1 uses a thin “explanation only” path and agents appear only in Phase 3, or if a lightweight agent exists in Phase 1. The handoff from “AI module” to “agent” is not documented.</p>
+<h3 id="25-feature-store-and-vector-db-usage-by-component">2.5 Feature Store and Vector DB Usage by Component</h3>
+<p><strong>Reference:</strong> Data Architecture → <em>Feature Store Design</em> (s-6-8), <em>Vector Database Design</em> (s-6-9); AI Platform; Agent Architecture.</p>
+<p>Feature store (online/offline) and vector DB are described at the data layer, but which AI modules or agents read from which store (e.g., recommendation engine vs agent context builder vs RAG) is not systematically specified. RAG/Phase 2 is mentioned in the AI platform but the exact consumers of the vector DB are unclear.</p>
+<h3 id="26-model-serving-api-contract">2.6 Model Serving API Contract</h3>
+<p><strong>Reference:</strong> AI Platform → <em>Self-Hosted Model Infrastructure</em> (s-5-1-8-3); Model Strategy → <em>Model Serving Infrastructure</em> (s-8-6-3).</p>
+<p>Backend calls the model serving layer via “HTTP or gRPC API”; required operations (e.g., completion, embedding, token limits, timeouts), auth, and request/response shapes are not defined. This leaves integration and compatibility (e.g., vLLM vs Ollama) underspecified.</p>
+<h3 id="27-financial-data-models-and-downstream-consumers">2.7 Financial Data Models and Downstream Consumers</h3>
+<p><strong>Reference:</strong> Financial Data Processing → <em>Financial Data Models</em> (s-7-1), <em>User Financial Profile Construction</em> (s-7-2); Recommendation Engine → <em>Inputs to the Recommendation Engine</em> (s-10-9-2).</p>
+<p>User, Account, Transaction, Asset, Portfolio, Product, Institution are mentioned; profile construction and recommendation inputs are described at a high level. The exact schema of “user financial profile” and “portfolio analysis results” consumed by the recommendation engine is not defined, which can complicate pipeline and API design.</p>
+<hr />
+<h2 id="3-architecture-risks">3. Architecture Risks</h2>
+<h3 id="31-recommendationcompliance-duplication-or-gaps">3.1 Recommendation–Compliance Duplication or Gaps</h3>
+<p><strong>Reference:</strong> Recommendation Engine → <em>Suitability Checks</em> (s-10-10); Compliance → <em>Compliance Engine</em> (s-12-4).</p>
+<p>Risk: Two validation layers with overlapping rules may diverge (e.g., different allocation limits) or create gaps (e.g., a rule only in one place). Mitigation: Define a single source of truth for rules and clarify whether suitability is a pre-filter for the compliance engine or the compliance engine is the only validator.</p>
+<h3 id="32-trigger-storm-and-deduplication-semantics">3.2 Trigger Storm and Deduplication Semantics</h3>
+<p><strong>Reference:</strong> AI Triggers → <em>Trigger Deduplication</em> (s-13-1-9), <em>Trigger Failure Handling</em> (s-13-1-11).</p>
+<p>Deduplication is mentioned but key semantics are unspecified: time window, key (user, event type, entity id), and behavior when multiple events collapse to one (last wins, first wins, merge). Without this, burst events (e.g., many transaction updates) could overload the system or cause ambiguous behavior.</p>
+<h3 id="33-agent-latency-and-timeouts">3.3 Agent Latency and Timeouts</h3>
+<p><strong>Reference:</strong> AI Agent Architecture → <em>Agent Responsibilities</em> (s-9-2), <em>Tool Invocation Layer</em> (s-9-6); Model Strategy → <em>Latency and Inference Performance</em> (s-8-5-8).</p>
+<p>Agents perform multi-step retrieval and LLM calls. End-to-end latency and timeout policy for “user request → agent → response” are not defined. Risk: poor UX or backend timeouts before the agent completes. Recommendation: Define SLAs and timeout/fallback behavior for agent-driven flows.</p>
+<h3 id="34-llm-output-validation-and-safety">3.4 LLM Output Validation and Safety</h3>
+<p><strong>Reference:</strong> AI Platform → <em>Integration with AI Models</em> (s-5-1-4); Recommendation Engine → <em>Integration with AI Language Models</em> (s-10-11-10); Agent Architecture → <em>Output Structuring</em> (s-9-7).</p>
+<p>Explanations are generated by LLMs and passed to users. The doc does not describe validation of LLM output (e.g., no financial advice outside scope, no hallucinated numbers). Risk: incorrect or non-compliant explanations. Recommendation: Add an explicit “explanation validation” or “output guardrails” step before delivery.</p>
+<h3 id="35-data-pipeline-failure-and-recommendation-freshness">3.5 Data Pipeline Failure and Recommendation Freshness</h3>
+<p><strong>Reference:</strong> Data Architecture → <em>Data Ingestion Pipelines</em> (s-6-4), <em>Error Handling and Recovery</em> (s-6-5-10); Recommendation Engine → <em>Recommendation Updates</em> (s-10-9-12).</p>
+<p>If ingestion or validation fails, the doc does not state whether recommendations are recomputed, cached, or marked stale. Risk: recommendations based on outdated data without user-visible indication. Recommendation: Define behavior when upstream data is missing or failed.</p>
+<h3 id="36-self-hosted-llm-capacity-and-fallback">3.6 Self-Hosted LLM Capacity and Fallback</h3>
+<p><strong>Reference:</strong> AI Platform → <em>Self-Hosted Model Infrastructure</em> (s-5-1-8-3); Infrastructure → <em>GPU Infrastructure</em> (s-15-3); Model Strategy → <em>GPU Requirements for Large Language Models</em> (s-8-7-3).</p>
+<p>All inference is on self-hosted models. No fallback or degradation path is described when the model server is overloaded or down (e.g., queue, backoff, or cached/template explanations). Risk: total loss of explanation and document intelligence during outages.</p>
+<hr />
+<h2 id="4-missing-components">4. Missing Components</h2>
+<h3 id="41-model-training-and-retraining-pipeline">4.1 Model Training and Retraining Pipeline</h3>
+<p><strong>Reference:</strong> Model Strategy → <em>Model Monitoring and Maintenance</em> (s-8-1-13), <em>Model Lifecycle Management</em> (s-8-3-10), <em>Data Drift Sensitivity</em> (s-8-5-7), <em>Continuous Evaluation in Production</em> (s-8-5-12).</p>
+<p>The doc states that “model retraining pipelines may be triggered when performance degradation is detected” and “periodic model retraining” but does not describe: training data preparation, feature pipeline for training, training orchestration, validation gates before deployment, or rollback. Evaluation pipeline is described (training → validation → evaluation → deployment decision) but not the training pipeline itself. <strong>Recommendation:</strong> Add a “Model Training and Retraining” section covering data prep, training trigger criteria, and promotion to production.</p>
+<h3 id="42-explicit-training-data-and-labeling">4.2 Explicit Training Data and Labeling</h3>
+<p><strong>Reference:</strong> Model Strategy → <em>Model Evaluation Criteria</em> (s-8-5), <em>Human Review and Validation</em> (s-8-5-11); Financial Data Processing; Recommendation Engine.</p>
+<p>Sources of labels for classification (e.g., transaction categories, income/expense), ranking (e.g., product suitability), and document extraction are not described. Human review is mentioned for validation but not labeling strategy or pipelines. <strong>Recommendation:</strong> Document training data sources, labeling process, and refresh cadence for each model family.</p>
+<h3 id="43-api-contract-for-platform-ai-modules">4.3 API Contract for Platform ↔ AI Modules</h3>
+<p><strong>Reference:</strong> System Architecture → <em>Core System Layers</em> (s-4-2); AI Platform → <em>AI Platform as an Intelligence Service</em> (s-5-1-6).</p>
+<p>Platform services request “user financial profiles, portfolio analysis results, risk scores, product recommendations, document interpretation results” but the API shape (sync/async, request/response, error codes, idempotency) is not defined. <strong>Recommendation:</strong> Add an “AI Platform API” or “Platform–AI Integration” section with principal operations and contracts.</p>
+<h3 id="44-idempotency-and-concurrency-for-recommendation-generation">4.4 Idempotency and Concurrency for Recommendation Generation</h3>
+<p><strong>Reference:</strong> Recommendation Engine → <em>Recommendation Generation Logic</em> (s-10-9); AI Triggers → <em>User Triggered Intelligence</em> (s-13-2).</p>
+<p>Concurrent recommendation requests for the same user (e.g., double-click or multiple tabs) are not addressed. Idempotency keys or request deduplication for recommendation generation are not specified. <strong>Recommendation:</strong> Define idempotency and concurrency behavior for recommendation (and other user-triggered) workflows.</p>
+<h3 id="45-rate-limiting-and-quotas-for-ai-and-model-serving">4.5 Rate Limiting and Quotas for AI and Model Serving</h3>
+<p><strong>Reference:</strong> Security → <em>Access Control</em> (s-16-3); Infrastructure; AI Triggers.</p>
+<p>No rate limiting or quota is described for: user-triggered AI (e.g., explanation requests), model server calls, or agent invocations. Risk: abuse or cost blow-up. <strong>Recommendation:</strong> Define rate limits and quotas per user/service for AI and model-serving endpoints.</p>
+<h3 id="46-versioning-and-backward-compatibility-for-recommendations-and-profiles">4.6 Versioning and Backward Compatibility for Recommendations and Profiles</h3>
+<p><strong>Reference:</strong> Recommendation Engine → <em>Recommendation Output Structure</em> (s-10-9-10); Financial Data Processing → <em>User Financial Profile</em> (s-7-2).</p>
+<p>How recommendation or profile schema versions evolve and how backward compatibility is maintained (e.g., for mobile clients or async consumers) is not described. <strong>Recommendation:</strong> Add versioning and compatibility policy for key outputs (recommendations, profile, risk score).</p>
+<h3 id="47-observability-and-tracing-across-layers">4.7 Observability and Tracing Across Layers</h3>
+<p><strong>Reference:</strong> Monitoring → <em>System Monitoring Architecture</em> (s-14-1), <em>Model Monitoring</em> (s-14-2); AI Triggers → <em>Trigger Logging</em> (s-13-1-10).</p>
+<p>Logging and metrics are mentioned per area (triggers, compliance, recommendations, model). End-to-end tracing (e.g., request id from frontend through backend, AI module, model server) is not specified. <strong>Recommendation:</strong> Define correlation ids and tracing strategy across platform, AI, and model serving.</p>
+<hr />
+<h2 id="5-over-engineered-components">5. Over-Engineered Components</h2>
+<h3 id="51-agent-architecture-for-phase-1-scope">5.1 Agent Architecture for Phase 1 Scope</h3>
+<p><strong>Reference:</strong> AI Agent Architecture (full section); AI Platform → <em>Phased AI Evolution</em> (s-5-1-8-4).</p>
+<p>Phase 1 is “LLM explanations for risk scores and portfolio recommendations” and “document OCR.” The full agent stack (context builder, tool layer, memory, decision logic, failure handling, output structuring) is more than Phase 1 needs. <strong>Recommendation:</strong> Document a “Phase 1 minimal path” (e.g., backend builds context and calls LLM for explanation) and reserve full agent architecture for Phase 3 or advanced use cases to avoid unnecessary complexity in early releases.</p>
+<h3 id="52-multiple-overlapping-validation-layers">5.2 Multiple Overlapping Validation Layers</h3>
+<p><strong>Reference:</strong> Recommendation Engine → <em>Suitability Checks</em> (s-10-10); Compliance → <em>Compliance Engine</em> (s-12-4), <em>Risk Alignment Checks</em> (s-12-3).</p>
+<p>Suitability checks and compliance engine both validate risk alignment, allocation, and product eligibility. Having both as separate architectural blocks may be redundant unless one is clearly a fast pre-check and the other the authoritative regulator. <strong>Recommendation:</strong> Consolidate or clearly separate “business suitability” vs “regulatory compliance” and document a single flow.</p>
+<h3 id="53-proliferation-of-module-names-in-ai-platform">5.3 Proliferation of “Module” Names in AI Platform</h3>
+<p><strong>Reference:</strong> AI Platform → <em>Core Functional Modules</em> (s-5-1-3).</p>
+<p>Six modules (Data Extraction, Enrichment, Ingestion, Management, Document Management, Recommendation Engine) are listed in a linear flow. In practice, Data Ingestion may be shared infrastructure rather than a distinct AI module, and Recommendation Engine is a major subsystem. <strong>Recommendation:</strong> Clarify which are logical stages vs deployable components and which are owned by platform vs data vs AI teams to avoid over-segmentation.</p>
+<h3 id="54-document-knowledge-graph">5.4 Document Knowledge Graph</h3>
+<p><strong>Reference:</strong> Document Intelligence → <em>Document Knowledge Graph</em> (s-11-8).</p>
+<p>A document knowledge graph is described for “extracted entities → graph construction → query.” For Phase 1 (OCR and structured extraction), a full graph may be unnecessary. <strong>Recommendation:</strong> Make the graph a Phase 2+ capability unless there is a concrete Phase 1 query need.</p>
+<hr />
+<h2 id="6-recommended-improvements">6. Recommended Improvements</h2>
+<h3 id="61-system-boundaries-and-naming">6.1 System Boundaries and Naming</h3>
+<ul>
+<li><strong>Recommendation Engine vs Compliance Engine:</strong> Define one of: (a) Suitability as a pre-step and Compliance Engine as final gate, (b) Compliance Engine as the only validator and suitability rules live in its rule repository, or (c) Suitability = business rules, Compliance = regulatory rules, with a single combined validation flow and clear ownership. <strong>Reference:</strong> Recommendation Engine (s-10-10), Compliance (s-12-4).</li>
+<li><strong>Data Ingestion:</strong> State explicitly whether “Data Ingestion” in the AI platform is the same as “Data Ingestion Pipelines” in Data Architecture or a thin orchestrator. <strong>Reference:</strong> AI Platform (s-5-5), Data Architecture (s-6-4).</li>
+<li><strong>AI Module vs Agent:</strong> Clarify that Phase 1 uses “AI module” (no agent) for explanations and OCR, and at which phase the agent layer is introduced. <strong>Reference:</strong> AI Platform (s-5-1-8), Agent Architecture (s-9-1).</li>
+</ul>
+<h3 id="62-trigger-and-workflow-clarity">6.2 Trigger and Workflow Clarity</h3>
+<ul>
+<li><strong>Trigger → Workflow mapping:</strong> Add a table or section mapping trigger type (and optionally event payload) to workflow/module and any priority. <strong>Reference:</strong> AI Triggers (s-13-1-6, s-13-1-7).</li>
+<li><strong>Deduplication semantics:</strong> Specify deduplication key, time window, and merge/selection policy. <strong>Reference:</strong> AI Triggers (s-13-1-9).</li>
+<li><strong>Failure handling:</strong> Specify max retries, backoff, dead-letter or manual review path. <strong>Reference:</strong> AI Triggers (s-13-1-11).</li>
+</ul>
+<h3 id="63-data-and-api-contracts">6.3 Data and API Contracts</h3>
+<ul>
+<li><strong>Profile and recommendation schemas:</strong> Define canonical structures for user financial profile and recommendation output (and key inputs to the recommendation engine) so that pipelines and APIs can be implemented consistently. <strong>Reference:</strong> Financial Data Processing (s-7-2), Recommendation Engine (s-10-9-2, s-10-9-10).</li>
+<li><strong>Platform–AI API:</strong> Document principal operations, sync/async, errors, and idempotency where relevant. <strong>Reference:</strong> System Architecture (s-4-2), AI Platform (s-5-1-6).</li>
+<li><strong>Model serving API:</strong> Document required operations (completion, embedding if any), auth, timeouts, and a minimal request/response contract. <strong>Reference:</strong> AI Platform (s-5-1-8-3), Model Strategy (s-8-6-3).</li>
+</ul>
+<h3 id="64-model-lifecycle">6.4 Model Lifecycle</h3>
+<ul>
+<li><strong>Training and retraining:</strong> Add a section on training data sources, pipeline, trigger conditions, validation before deploy, and rollback. <strong>Reference:</strong> Model Strategy (s-8-1-13, s-8-3-10, s-8-5-7).</li>
+<li><strong>Labeling:</strong> Document how training labels are obtained (e.g., human labeling, heuristics, user feedback) for each major model type. <strong>Reference:</strong> Model Strategy (s-8-5-11), Financial Data Processing, Recommendation Engine.</li>
+</ul>
+<h3 id="65-safety-and-operations">6.5 Safety and Operations</h3>
+<ul>
+<li><strong>LLM output validation:</strong> Add a step (e.g., output structuring + validation or guardrails) before explanations are shown to users. <strong>Reference:</strong> Recommendation Engine (s-10-11-10), Agent Architecture (s-9-7).</li>
+<li><strong>Rate limiting and quotas:</strong> Define limits for AI and model-serving usage per user/service. <strong>Reference:</strong> Security (s-16-3), Infrastructure.</li>
+<li><strong>Stale data and failures:</strong> Define behavior when ingestion or validation fails (e.g., use cached profile, mark recommendations stale, or block). <strong>Reference:</strong> Data Architecture (s-6-4, s-6-5-10), Recommendation Engine (s-10-9-12).</li>
+<li><strong>Model server resilience:</strong> Describe fallback or degradation when the model server is unavailable (e.g., queue, cached/template explanations). <strong>Reference:</strong> AI Platform (s-5-1-8-3), Infrastructure (s-15-3).</li>
+</ul>
+<h3 id="66-observability-and-versioning">6.6 Observability and Versioning</h3>
+<ul>
+<li><strong>Tracing:</strong> Define correlation id and tracing across frontend, backend, AI modules, and model server. <strong>Reference:</strong> Monitoring (s-14-1), AI Triggers (s-13-1-10).</li>
+<li><strong>Output versioning:</strong> Define versioning and compatibility for recommendations and key profile/risk outputs. <strong>Reference:</strong> Recommendation Engine (s-10-9-10), Financial Data Processing (s-7-2).</li>
+</ul>
+<h3 id="67-scope-and-phasing">6.7 Scope and Phasing</h3>
+<ul>
+<li><strong>Phase 1 minimal path:</strong> Document the minimal implementation for Phase 1 (no full agent; backend builds context and calls LLM for explanations; OCR pipeline as described). <strong>Reference:</strong> AI Platform (s-5-1-8-4), Agent Architecture.</li>
+<li><strong>Feature/vector store usage:</strong> Clarify which components read from the feature store and which from the vector DB (e.g., recommendation engine vs agent vs RAG). <strong>Reference:</strong> Data Architecture (s-6-8, s-6-9), AI Platform, Agent Architecture.</li>
+</ul>
+<hr />
+<h2 id="7-summary">7. Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Verdict</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>System boundaries</strong></td>
+<td>Partially clear</td>
+<td>Real architecture and phased evolution are clear; suitability vs compliance and data ingestion naming need clarification.</td>
+</tr>
+<tr>
+<td><strong>AI architecture</strong></td>
+<td>Largely sound</td>
+<td>Phased approach and module breakdown are good; agent scope for Phase 1 and model/output validation need definition.</td>
+</tr>
+<tr>
+<td><strong>Data architecture</strong></td>
+<td>Strong</td>
+<td>Ingestion, validation, and storage layers are well described; feature/vector consumption by components should be explicit.</td>
+</tr>
+<tr>
+<td><strong>Recommendation engine</strong></td>
+<td>Strong</td>
+<td>End-to-end pipeline, suitability, and explainability are well covered; idempotency and versioning are missing.</td>
+</tr>
+<tr>
+<td><strong>Trigger framework</strong></td>
+<td>Adequate</td>
+<td>Flow and diagram exist; trigger→workflow mapping and deduplication semantics need specification.</td>
+</tr>
+<tr>
+<td><strong>Model lifecycle</strong></td>
+<td>Gaps</td>
+<td>Evaluation and deployment are covered; training/retraining pipeline and labeling are not.</td>
+</tr>
+<tr>
+<td><strong>Agent architecture</strong></td>
+<td>Rich but phase-unclear</td>
+<td>Design is implementable; clarify when agents are introduced and simplify Phase 1.</td>
+</tr>
+<tr>
+<td><strong>Security</strong></td>
+<td>Good coverage</td>
+<td>Layers, encryption, access control, model security are present; rate limiting and AI-specific guardrails can be added.</td>
+</tr>
+<tr>
+<td><strong>Infrastructure</strong></td>
+<td>Feasible</td>
+<td>Compute, GPU, storage, scaling are described; model server resilience and capacity planning need attention.</td>
+</tr>
+</tbody>
+</table>
+<p>Overall, the architecture is <strong>technically sound and feasible</strong> for an AI-powered financial intelligence platform. The main gaps are: (1) clarifying boundaries (suitability vs compliance, ingestion, AI module vs agent), (2) specifying trigger→workflow mapping and deduplication, (3) adding training/retraining and labeling to the model lifecycle, (4) defining key API/schema contracts and operational behavior (idempotency, rate limits, staleness, model server fallback), and (5) aligning agent complexity with Phase 1 scope. Addressing these will reduce implementation risk and support consistent diagram generation.</p>
+<hr />
+<p><em>Review produced against documentation in <code>content/</code> and diagrams referenced in <code>content/diagrams.html</code>. Section IDs (e.g. s-5-1-8) refer to heading IDs in the HTML content files.</em></p>

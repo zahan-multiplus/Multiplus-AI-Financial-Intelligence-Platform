@@ -1,0 +1,195 @@
+<h1 id="multiplus-ai-integration-plan-reuse-matrix">Multiplus AI Integration Plan — Reuse Matrix</h1>
+<p><strong>Purpose:</strong> Identify which existing platform components should be reused or extended when introducing AI capabilities. No design or file changes—mapping only.</p>
+<p><strong>Source:</strong> <code>docs/PLATFORM_ARCHITECTURE_INTELLIGENCE.md</code> (current implementation).</p>
+<hr />
+<h2 id="reuse-matrix-table">Reuse Matrix Table</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Existing Service/Module</th>
+<th>AI Role</th>
+<th>Integration Strategy</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Investor profiling (questionnaire)</strong></td>
+<td>ManualAssessmentService, RiskAnalysisEngineService, RiskProfile, SessionQuestion/SessionAnswer, FriendlySummary</td>
+<td>AI augments insight generation</td>
+<td>AI consumes output; Extend with AI</td>
+<td>Backend keeps composite score and band logic (Reuse As-Is). AI consumes profile + session data to generate narrative insights or personalized summaries. Optional: AI extends with behavioral insight layer.</td>
+</tr>
+<tr>
+<td><strong>Investor profiling (credit-based)</strong></td>
+<td>UserRiskCalculatorService, RiskVariableDerivationService, UserRiskOrchestrationService, UserRiskScore, RiskScoringConfigService</td>
+<td>AI generates explanations</td>
+<td>AI consumes output; Extend with AI</td>
+<td>Score and bucket calculation stay deterministic (Reuse As-Is). AI consumes score + components to generate natural-language risk explanation for user.</td>
+</tr>
+<tr>
+<td><strong>Risk scoring (user/credit)</strong></td>
+<td>UserRiskCalculatorService, RiskScoringConfigService, application_config (risk_scoring.*)</td>
+<td>—</td>
+<td>Reuse As-Is</td>
+<td>Deterministic formula (eight components, weights, buckets). Do not replace with AI. AI only consumes score/output for explanations.</td>
+</tr>
+<tr>
+<td><strong>Risk scoring (questionnaire)</strong></td>
+<td>RiskAnalysisEngineService, RiskScoreBand, ManualAssessmentService</td>
+<td>—</td>
+<td>Reuse As-Is</td>
+<td>Composite score and band logic stay rule-based. AI consumes for explanations or insights.</td>
+</tr>
+<tr>
+<td><strong>Risk scoring (fund)</strong></td>
+<td>FundMetricsNormalizationService, FundMetricsNormalizedWriterService, fund_metrics_normalized</td>
+<td>—</td>
+<td>Reuse As-Is</td>
+<td>Fund risk score (volatility, drawdown, downside) remains formula-based. AI may consume for recommendation reasoning or explanations.</td>
+</tr>
+<tr>
+<td><strong>Asset allocation engine</strong></td>
+<td>AssetAllocationService, RiskAssetAllocationConfig</td>
+<td>—</td>
+<td>Reuse As-Is</td>
+<td>Allocation rules and validation stay deterministic. AI consumes allocation + matching funds to generate allocation explanations; does not replace allocation logic.</td>
+</tr>
+<tr>
+<td><strong>Portfolio construction / matching funds</strong></td>
+<td>AssetAllocationService (matching by fund_risk_score gap: Strong/Acceptable), ProductService</td>
+<td>AI produces recommendation reasoning</td>
+<td>AI consumes output</td>
+<td>Existing logic: match funds by risk gap. Keep as-is. New AI component can add natural-language reasoning for <em>why</em> these funds; AI reads allocation + fund list + risk profile.</td>
+</tr>
+<tr>
+<td><strong>Fund analysis / metrics</strong></td>
+<td>NavMetricsCalculationService, NavMetricsWriterService, FundMetricsNormalizationService, fund_nav_metrics, fund_metrics_normalized</td>
+<td>AI consumes analytics outputs</td>
+<td>AI reads from service output</td>
+<td>Metrics and fund risk score stay deterministic. AI consumes for insights, comparison summaries, or recommendation explanations.</td>
+</tr>
+<tr>
+<td><strong>Document upload &amp; storage</strong></td>
+<td>DocumentUploadController, DocumentUploadService, AwsS3Service, CustomerDocument</td>
+<td>—</td>
+<td>Reuse As-Is</td>
+<td>Upload, validation, type mapping, S3/local storage unchanged. AI document pipelines consume stored documents (e.g. for OCR/extraction).</td>
+</tr>
+<tr>
+<td><strong>Document parsing (credit report)</strong></td>
+<td>CreditReportProcessingService, PDFBox, CreditReportMongoRepository</td>
+<td>Extend with AI</td>
+<td>Service calls AI module (optional)</td>
+<td>Keep existing PDF→JSON pipeline (Reuse As-Is). Optionally extend: AI for harder layouts or confidence scoring. AI document extraction is New AI Component for other doc types (CAS, bank, insurance).</td>
+</tr>
+<tr>
+<td><strong>Document extraction (other types)</strong></td>
+<td>—</td>
+<td>AI performs document extraction</td>
+<td>New AI component required</td>
+<td>No existing CAS/bank statement/insurance parsing. New AI component for OCR + entity extraction; writes to existing storage (S3, MySQL/Mongo) and can feed risk/profile pipelines.</td>
+</tr>
+<tr>
+<td><strong>NAV / MF data ingestion</strong></td>
+<td>NavIngestionService, MfApiClient, NavMongoToMysqlMigrationService, NavDailyRunScheduler, NavPipelineProgressService</td>
+<td>—</td>
+<td>Reuse As-Is</td>
+<td>Deterministic pipeline (MFAPI → Mongo → MySQL → metrics). AI does not replace. AI may consume NAV/fund data for insights or anomaly detection (separate AI component).</td>
+</tr>
+<tr>
+<td><strong>Financial analytics pipelines</strong></td>
+<td>NavMetricsCalculationService, FundMetricsNormalizationService, UserRiskCalculatorService, RiskVariableDerivationService</td>
+<td>AI consumes analytics outputs</td>
+<td>AI reads from service output / data store</td>
+<td>All numeric and rule-based analytics stay in place. AI consumes outputs (scores, metrics, allocation) for explanations, insights, or anomaly detection.</td>
+</tr>
+<tr>
+<td><strong>Notification systems</strong></td>
+<td>UserNotificationService, NotificationTypeAdminService, SmsService, TwilioSmsProvider, Quarkus Mailer, WhatsAppService, WebhookMessageProcessor</td>
+<td>AI produces insights / content</td>
+<td>Service calls AI module (for content)</td>
+<td>Reuse delivery and preferences (Reuse As-Is). When notifications carry AI-generated content (e.g. insight summary, explanation), backend calls AI module to generate text, then sends via existing SMS/email/WhatsApp.</td>
+</tr>
+<tr>
+<td><strong>CRM integrations</strong></td>
+<td>CrmService, ERPNextIntegrationService</td>
+<td>—</td>
+<td>Reuse As-Is</td>
+<td>Lead/KYC push unchanged. AI does not replace. Optional: AI-generated summaries for CRM context (Extend with AI, backend calls AI).</td>
+</tr>
+<tr>
+<td><strong>Financial data integrations</strong></td>
+<td>MfApiClient (MFAPI), CreditReportService (Kyckart)</td>
+<td>—</td>
+<td>Reuse As-Is</td>
+<td>Keep as single source of truth for fund and credit data. AI consumes ingested data for analytics and explanations; no AI in the ingestion path.</td>
+</tr>
+<tr>
+<td><strong>Data storage (MySQL)</strong></td>
+<td>Hibernate Panache, JDBC, entities (UserRiskScore, RiskProfile, RiskAssetAllocationConfig, etc.)</td>
+<td>AI consumes stored data</td>
+<td>AI reads from service output / API</td>
+<td>All transactional and config data stays in MySQL. AI modules read via existing services or dedicated read APIs; no replacement of storage.</td>
+</tr>
+<tr>
+<td><strong>Data storage (MongoDB)</strong></td>
+<td>MongoClient, navs, credit_reports, Kyckart raw</td>
+<td>AI consumes stored data</td>
+<td>AI reads from service output / data store</td>
+<td>NAV and credit report storage unchanged. New AI document outputs can be written to MongoDB if needed; AI reads for RAG or context.</td>
+</tr>
+<tr>
+<td><strong>Data storage (S3)</strong></td>
+<td>AwsS3Service (documents)</td>
+<td>AI consumes/produces documents</td>
+<td>Service provides documents to AI; AI writes extraction results</td>
+<td>Existing doc storage reused. AI document pipeline reads from S3 (or URL); optional: AI writes extracted structured data back to platform (DB or object store).</td>
+</tr>
+<tr>
+<td><strong>Product / catalog</strong></td>
+<td>ProductService, MasterProductController, master data</td>
+<td>—</td>
+<td>Reuse As-Is</td>
+<td>Product catalog and localization unchanged. AI consumes product metadata for recommendation reasoning and explanations.</td>
+</tr>
+<tr>
+<td><strong>User risk API</strong></td>
+<td>UserRiskController (POST /generate, GET /allocation), UserRiskOrchestrationService</td>
+<td>AI generates explanations</td>
+<td>Service calls AI module</td>
+<td>Existing API stays. New flow: after score/allocation is computed, backend can call AI module with score + context to get natural-language explanation and return in response or separate endpoint.</td>
+</tr>
+<tr>
+<td><strong>Risk profile API</strong></td>
+<td>ManualAssessmentResource, AiRiskAnalysisResource (deprecated), PdfReportService</td>
+<td>AI generates insights or report narrative</td>
+<td>Extend with AI; Service calls AI module</td>
+<td>Questionnaire flow and PDF report generation reused. Re-enable or replace AiRiskAnalysisResource with AI that consumes RiskProfile + session to generate narrative insights or enhanced report text.</td>
+</tr>
+<tr>
+<td><strong>Allocation API</strong></td>
+<td>AssetAllocationService, GET /api/v1/user-risk/allocation</td>
+<td>AI generates explanations</td>
+<td>Service calls AI module</td>
+<td>Allocation and matching funds unchanged. Backend calls AI with allocation + funds + user context to generate “why this allocation” explanation.</td>
+</tr>
+<tr>
+<td><strong>Event emission</strong></td>
+<td>RiskScoreComputedEvent, event/ package</td>
+<td>AI consumes events (optional)</td>
+<td>Event-driven integration</td>
+<td>Keep existing events. Optional: trigger AI workflows (e.g. generate explanation, insight) when risk score is computed; new consumer subscribes to event.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="summary-key-reuse-opportunities">Summary: Key Reuse Opportunities</h2>
+<ul>
+<li><strong>Reuse as-is (do not replace with AI):</strong> User risk score formula, questionnaire composite score and bands, fund risk score, asset allocation rules, allocation validation, fund matching by risk gap, NAV ingestion and metrics pipeline, document upload/storage, product catalog, CRM/MFAPI/Kyckart integrations, MySQL/MongoDB/S3 storage, notification delivery (SMS/email/WhatsApp).</li>
+<li><strong>AI consumes output:</strong> Risk scores (user and fund), allocation and matching funds, portfolio and fund metrics, stored documents, product data. Use for explanations, insights, recommendation reasoning, and optional anomaly detection.</li>
+<li><strong>Extend with AI:</strong> (1) <strong>Explanations:</strong> Backend calls AI module with existing outputs (risk score, allocation, matching funds) to generate natural-language explanations. (2) <strong>Risk profile:</strong> Use AI to generate narrative insights or report text from questionnaire results. (3) <strong>Document parsing:</strong> Keep credit report PDF pipeline; add AI for harder layouts or new doc types (CAS, bank, insurance) via a new document-extraction component. (4) <strong>Notifications:</strong> When content is AI-generated, backend calls AI then uses existing SmsService/Mailer/WhatsApp to send.</li>
+<li><strong>New AI components:</strong> (1) <strong>Model serving</strong> for LLM (and optionally embeddings). (2) <strong>Explanation service</strong> that takes structured context (score, allocation, profile) and returns text. (3) <strong>Document intelligence</strong> for non–credit-report docs (OCR + extraction), writing into existing storage. (4) Optional: <strong>anomaly detection</strong> or <strong>insight pipeline</strong> that reads from existing analytics outputs and raises alerts or insights.</li>
+<li><strong>Integration patterns:</strong> <strong>Service calls AI module</strong> for explanations and notification content; <strong>AI reads from service output or data store</strong> for all consumed data; <strong>event-driven</strong> optional for triggering AI on RiskScoreComputedEvent. Deterministic rules (allocation, suitability, scoring) remain in existing services; AI augments with explanation and insight only.</li>
+</ul>

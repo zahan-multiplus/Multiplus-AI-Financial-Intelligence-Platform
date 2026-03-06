@@ -1,0 +1,545 @@
+<h1 id="multiplus-platform-technical-architecture-intelligence">Multiplus Platform — Technical Architecture Intelligence</h1>
+<p>This document describes the <strong>current implementation</strong> of the Multiplus financial platform. It is intended to align future AI platform architecture documentation with the real system and to support smooth integration of AI capabilities.</p>
+<p><strong>Generated:</strong> Architecture extraction from the multiplus codebase.<br />
+<strong>Scope:</strong> Repository structure, core services, data models, business logic, data infrastructure, external integrations, document processing, and existing analytics/AI logic.</p>
+<hr />
+<h2 id="1-repository-architecture">1. Repository Architecture</h2>
+<h3 id="11-top-level-structure">1.1 Top-Level Structure</h3>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>backend/</strong></td>
+<td>Quarkus Java backend (single Maven module). Main application server, APIs, and business logic.</td>
+</tr>
+<tr>
+<td><strong>frontend/</strong></td>
+<td>React SPA — dashboard, CRM, invoice, forms, authentication.</td>
+</tr>
+<tr>
+<td><strong>webapp/</strong></td>
+<td>Second React app — landing, public-facing flows.</td>
+</tr>
+<tr>
+<td><strong>database/</strong></td>
+<td>Schema and migrations for MySQL. Flyway-style migrations plus full schema scripts.</td>
+</tr>
+<tr>
+<td><strong>deployment/</strong></td>
+<td>Deployment documentation and scripts (e.g. EC2, deploy-admin).</td>
+</tr>
+<tr>
+<td><strong>ci-cd/</strong></td>
+<td>CI/CD setup and documentation.</td>
+</tr>
+<tr>
+<td><strong>scripts/</strong></td>
+<td>Utility scripts (e.g. setup-remote-database).</td>
+</tr>
+<tr>
+<td><strong>docs/</strong></td>
+<td>Project-level documentation (e.g. ARCHITECTURE_ANALYSIS.md, AI_INFRASTRUCTURE_REQUIREMENTS_ANALYSIS.md, diagrams).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="12-backend-stack">1.2 Backend Stack</h3>
+<ul>
+<li><strong>Runtime:</strong> Quarkus 3.6, Java 17  </li>
+<li><strong>Build:</strong> Maven; single module, no submodules  </li>
+<li><strong>HTTP:</strong> REST with JAX-RS (Resteasy Reactive), JSON (Jackson)  </li>
+<li><strong>Database:</strong> MySQL (Hibernate ORM + Panache), MongoDB (MongoClient)  </li>
+<li><strong>Migrations:</strong> Flyway <strong>disabled</strong> — migrations in <code>database/migrations/</code> are run manually (e.g. <code>run-all-migrations.ps1</code>)  </li>
+<li><strong>Security:</strong> SmallRye JWT (issuer from <code>RBAC_JWT_ISSUER</code>), RBAC (roles, permissions, resource/action types)  </li>
+<li><strong>Scheduler:</strong> Quarkus Scheduler (e.g. NAV daily run at 22:00)  </li>
+<li><strong>Config:</strong> YAML (<code>application.yml</code>), SmallRye ConfigMapping (<code>ApplicationConfig</code>), secrets from environment (<code>.env</code>)</li>
+</ul>
+<p>Key backend dependencies (from <code>backend/pom.xml</code>):<br />
+<code>quarkus-hibernate-orm-panache</code>, <code>quarkus-jdbc-mysql</code>, <code>quarkus-mongodb-client</code>, <code>quarkus-smallrye-jwt</code>, <code>quarkus-scheduler</code>, <code>quarkus-mailer</code>, <code>quarkus-cache</code>, Apache PDFBox, docx4j (DOCX→PDF), AWS S3/SNS, Twilio (SMS), BouncyCastle (key parsing).</p>
+<h3 id="13-backend-package-structure">1.3 Backend Package Structure</h3>
+<p>All Java sources live under <code>backend/src/main/java/com/multiplus/</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Package / Area</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>controller/</strong></td>
+<td>JAX-RS REST controllers; subpackages: account, admin, billing, config, consent, customer, family, master, mf, mitra, notification, payment, portfolio, rbac, report</td>
+</tr>
+<tr>
+<td><strong>service/</strong></td>
+<td>Business logic; subpackages: consent, document, master, mf, rbac, sms, storage</td>
+</tr>
+<tr>
+<td><strong>model/entity/</strong></td>
+<td>JPA/Panache entities (MySQL) — RBAC, sign-in, KYC, consent, notifications, family, mitra, user risk, config</td>
+</tr>
+<tr>
+<td><strong>model/dto/</strong></td>
+<td>Request/response DTOs by domain (rbac, kyc, consent, master, etc.)</td>
+</tr>
+<tr>
+<td><strong>model/mf/</strong></td>
+<td>NAV/ingestion models (e.g. IngestionState, NavData)</td>
+</tr>
+<tr>
+<td><strong>riskprofile/</strong></td>
+<td>Risk questionnaire and AI risk: entity, repository, service, web (REST), dto, util</td>
+</tr>
+<tr>
+<td><strong>nav/</strong></td>
+<td>NAV pipeline: migration (Mongo→MySQL), metrics (calculation, normalization, fund risk score)</td>
+</tr>
+<tr>
+<td><strong>repository/</strong></td>
+<td>MongoDB repositories (credit reports, Kyckart raw)</td>
+</tr>
+<tr>
+<td><strong>config/</strong></td>
+<td>ApplicationConfig (SmallRye ConfigMapping, prefix <code>multiplus</code>) and nested config interfaces</td>
+</tr>
+<tr>
+<td><strong>event/</strong></td>
+<td>Domain events (e.g. RiskScoreComputedEvent)</td>
+</tr>
+<tr>
+<td><strong>security/</strong></td>
+<td>CORS, permission checks (<code>@RequiresPermission</code>)</td>
+</tr>
+<tr>
+<td><strong>util/</strong></td>
+<td>JwtUserResolver, SecurityContextUtil, ValidationUtil, CryptoUtil, JwtTokenUtil</td>
+</tr>
+<tr>
+<td><strong>common/</strong></td>
+<td>AmcWhitelist, FundHouseAndCategoryMapping, FundsSchemaAssumption</td>
+</tr>
+<tr>
+<td><strong>exception/</strong></td>
+<td>ErrorResponse, exception mappers (e.g. OptimisticLockExceptionMapper)</td>
+</tr>
+</tbody>
+</table>
+<p>Data access is a mix of <strong>Panache entities</strong> (static finders), <strong>dedicated repositories</strong> (riskprofile, nav, MongoDB), and <strong>direct JDBC</strong> (AgroalDataSource) for NAV/metrics and allocation queries.</p>
+<hr />
+<h2 id="2-core-services">2. Core Services</h2>
+<h3 id="21-rest-api-overview">2.1 REST API Overview</h3>
+<p>APIs are versioned under <code>/api/v1/</code> (and some under <code>/api/</code>). Authentication is JWT-based; many endpoints require RBAC permissions.</p>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>Base Path</th>
+<th>Main Resource(s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>RBAC / Auth</strong></td>
+<td><code>/api/v1/rbac/auth</code></td>
+<td>AuthController</td>
+</tr>
+<tr>
+<td></td>
+<td><code>/api/v1/rbac/users</code>, <code>/roles</code>, <code>/permissions</code>, <code>/resource-types</code>, <code>/action-types</code></td>
+<td>UserController, RoleController, PermissionController, ResourceTypeController, ActionTypeController</td>
+</tr>
+<tr>
+<td><strong>Account</strong></td>
+<td><code>/api/v1/account</code></td>
+<td>AccountController</td>
+</tr>
+<tr>
+<td><strong>Customer</strong></td>
+<td><code>/api/v1/customer</code>, <code>/api/v1/customer/leads</code></td>
+<td>CustomerController, CustomerLeadController</td>
+</tr>
+<tr>
+<td><strong>Onboarding / Sign-up</strong></td>
+<td><code>/api/v1/onboarding</code>, <code>/api/v1/signup</code></td>
+<td>OnboardingController, SignupController</td>
+</tr>
+<tr>
+<td><strong>Sign-in</strong></td>
+<td><code>/api/v1/signin</code></td>
+<td>SignInController</td>
+</tr>
+<tr>
+<td><strong>KYC</strong></td>
+<td><code>/api/v1/kyc</code></td>
+<td>KycController</td>
+</tr>
+<tr>
+<td><strong>Product</strong></td>
+<td><code>/api/v1/products</code></td>
+<td>ProductController</td>
+</tr>
+<tr>
+<td><strong>Portfolio</strong></td>
+<td><code>/api/v1/portfolio</code></td>
+<td>PortfolioController</td>
+</tr>
+<tr>
+<td><strong>User risk (credit)</strong></td>
+<td><code>/api/v1/user-risk</code></td>
+<td>UserRiskController</td>
+</tr>
+<tr>
+<td><strong>Risk profile (questionnaire)</strong></td>
+<td><code>/api/v1/riskprofile</code>, <code>/api/v1/riskprofile/ai</code>, <code>/api/v1/riskprofile/admin</code></td>
+<td>ManualAssessmentResource, AiRiskAnalysisResource, AdminResource, AdminQuestionResource</td>
+</tr>
+<tr>
+<td><strong>MF / NAV</strong></td>
+<td><code>/api/v1/mf/nav</code></td>
+<td>NavIngestionController</td>
+</tr>
+<tr>
+<td><strong>Documents</strong></td>
+<td><code>/api/v1/documents</code></td>
+<td>DocumentUploadController</td>
+</tr>
+<tr>
+<td><strong>Billing / Payment</strong></td>
+<td><code>/api/v1/billing</code>, <code>/api/v1/payment</code></td>
+<td>BillingController, PaymentController</td>
+</tr>
+<tr>
+<td><strong>Report</strong></td>
+<td><code>/api/v1/report</code></td>
+<td>ReportController</td>
+</tr>
+<tr>
+<td><strong>Consent</strong></td>
+<td><code>/api/v1/consent/clauses</code>, <code>/purposes</code>, <code>/user-consents</code></td>
+<td>ConsentManagementController, ConsentPurposeController, UserConsentController</td>
+</tr>
+<tr>
+<td><strong>Config</strong></td>
+<td><code>/api/v1/config</code></td>
+<td>ConfigurationController</td>
+</tr>
+<tr>
+<td><strong>Master data</strong></td>
+<td><code>/api/v1/master/countries</code>, <code>/languages</code>, <code>/content</code>, <code>/content/translations</code>, <code>/products</code></td>
+<td>MasterCountryController, MasterLanguageController, MasterContentController, MasterContentTranslationController, MasterProductController</td>
+</tr>
+<tr>
+<td><strong>Notifications</strong></td>
+<td><code>/api/notifications</code>, <code>/api/v1/notification-preferences</code>, <code>/api/v1/notification-types</code></td>
+<td>UserNotificationController, NotificationPreferenceController, NotificationTypeController</td>
+</tr>
+<tr>
+<td><strong>CRM</strong></td>
+<td><code>/api/v1/crm</code></td>
+<td>CrmController</td>
+</tr>
+<tr>
+<td><strong>Localization</strong></td>
+<td><code>/api/v1/localization</code></td>
+<td>LocalizationController</td>
+</tr>
+<tr>
+<td><strong>Public</strong></td>
+<td><code>/api/public/terms</code>, <code>/api/public/consent</code>, <code>/api/public/feedback</code></td>
+<td>PublicTermsController, PublicConsentController, FeedbackController</td>
+</tr>
+<tr>
+<td><strong>Mitra</strong></td>
+<td><code>/api/mitra</code>, <code>/api/admin/mitra</code></td>
+<td>MitraController, AdminMitraController</td>
+</tr>
+<tr>
+<td><strong>Health / Test</strong></td>
+<td><code>/api/health</code>, <code>/api/v1/test/sms</code></td>
+<td>HealthController, SmsTestController</td>
+</tr>
+<tr>
+<td><strong>Webhook</strong></td>
+<td><code>/webhook</code></td>
+<td>WhatsAppWebhookController</td>
+</tr>
+</tbody>
+</table>
+<p>OpenAPI: <code>/openapi</code>; Swagger UI: <code>/swagger-ui</code>.</p>
+<h3 id="22-service-layer-key-classes-by-domain">2.2 Service Layer (Key Classes by Domain)</h3>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>Services / Beans</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>User / RBAC</strong></td>
+<td>RbacService, AuthService, UserService, RoleService, PermissionService, ActionTypeService, ResourceTypeService, RbacAuditService</td>
+</tr>
+<tr>
+<td><strong>Onboarding / Sign-in</strong></td>
+<td>SignupService, SignInService, SignInSecurityService, JourneyService, OtpIpThrottleService</td>
+</tr>
+<tr>
+<td><strong>KYC</strong></td>
+<td>KycService, KycValidationService, PanVerificationService, BankVerificationService, MobileVerificationService</td>
+</tr>
+<tr>
+<td><strong>Customer / CRM</strong></td>
+<td>CrmService, ERPNextIntegrationService</td>
+</tr>
+<tr>
+<td><strong>User risk / Credit</strong></td>
+<td>CreditReportService, CreditReportProcessingService, UserRiskCalculatorService, UserRiskOrchestrationService, RiskVariableDerivationService, RiskScoringConfigService</td>
+</tr>
+<tr>
+<td><strong>Asset allocation / Product</strong></td>
+<td>AssetAllocationService, ProductService</td>
+</tr>
+<tr>
+<td><strong>Risk profile (questionnaire)</strong></td>
+<td>ManualAssessmentService, RiskAnalysisEngineService, AuditService, PdfReportService</td>
+</tr>
+<tr>
+<td><strong>Documents</strong></td>
+<td>DocumentUploadService, AwsS3Service (storage)</td>
+</tr>
+<tr>
+<td><strong>NAV / MF</strong></td>
+<td>NavIngestionService, MfApiClient, FundSyncService, NavMongoToMysqlMigrationService, MongoNavReaderService, NavMysqlWriterService, NavDailyRunService, NavDailyRunScheduler, NavPipelineProgressService, IngestionStateService, FundIdResolverService, NavMetricsCalculationService, NavMetricsWriterService, FundMetricsNormalizationService, FundMetricsNormalizedWriterService, FundProcessorService, NavMigrationRunner</td>
+</tr>
+<tr>
+<td><strong>Master</strong></td>
+<td>MasterCountryService, MasterProductService, MasterLanguageService, MasterContentTranslationService</td>
+</tr>
+<tr>
+<td><strong>Consent</strong></td>
+<td>TcClauseService, ConsentPurposeService, UserConsentService</td>
+</tr>
+<tr>
+<td><strong>Config</strong></td>
+<td>ConfigurationService, FeatureFlagService</td>
+</tr>
+<tr>
+<td><strong>Notifications</strong></td>
+<td>UserNotificationService, NotificationTypeAdminService</td>
+</tr>
+<tr>
+<td><strong>Other</strong></td>
+<td>LocalizationService, TermsService, SmsService, EmailValidationService, AccountNumberService, MitraService, MitraWithdrawalService, WhatsAppService, WhatsAppOnboardingPersistenceService, ConversationService, WebhookMessageProcessor</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-notable-api-behaviors">2.3 Notable API Behaviors</h3>
+<ul>
+<li><strong>User risk:</strong>  </li>
+<li><strong>POST /api/v1/user-risk/generate</strong> — Body: <code>multiplus_account_no</code> (required); optional <code>force_regenerate</code>, <code>admin_force_regenerate_override</code>. Reuses recent credit report when fresh; otherwise Kyckart call, parse, derive variables, compute score, persist.  </li>
+<li><strong>GET /api/v1/user-risk/allocation?multiplus_account_no=...</strong> — Returns allocation bands and matching funds by risk score (Strong/Acceptable gap).</li>
+<li><strong>Portfolio:</strong> GET <code>/api/v1/portfolio/me</code> and <code>/me/list</code> — Permission-gated; actual portfolio retrieval is marked TODO/pending.</li>
+<li><strong>Risk profile AI:</strong> <code>/api/v1/riskprofile/ai</code> run/initiate is deprecated (410); only fetch of existing report is supported; no active AI model pipeline.</li>
+</ul>
+<hr />
+<h2 id="3-data-models">3. Data Models</h2>
+<h3 id="31-relational-mysql-hibernate-panache">3.1 Relational (MySQL / Hibernate Panache)</h3>
+<p>Entities live under <code>model/entity/</code> and <code>riskprofile/entity/</code>. Schema is managed via <code>database/schema/</code> and <code>database/migrations/</code> (no Hibernate DDL).</p>
+<p><strong>Sign-in / onboarding:</strong> SigninAttempt, OtpRequest, OtpIpThrottle, EmailVerificationToken, SigninMagicLink, SigninAuditTrail.</p>
+<p><strong>Customer / KYC:</strong> PersonalDetails, ContactDetails, FinanceDetails, BankDetails; CustomerLead, CustomerKycDetails, CustomerDocument.</p>
+<p><strong>Config / audit:</strong> ApplicationConfig, ApplicationAuditLog.</p>
+<p><strong>Master:</strong> MasterCountry, MasterLanguage, MasterContent, MasterContentTranslation, MasterProduct, MasterDisposableEmailDomain.</p>
+<p><strong>Consent:</strong> ConsentPurpose, TcClause, ConsentClauseMapping, UserConsent, UserConsentClause.</p>
+<p><strong>Notifications:</strong> Notification, NotificationType, NotificationTypeDefault, NotificationChannel, UserNotification, UserNotificationPreference.</p>
+<p><strong>Family:</strong> GroupInvitation, GroupMember, FamilyGroup, FamilyGroupMemberHistory.</p>
+<p><strong>Mitra:</strong> MitraProfile, MitraWithdrawalRequest.</p>
+<p><strong>User risk:</strong> UserRiskScore, UserRiskScoreHistory, UserRiskVariables, RiskGenerationJob, RiskAssetAllocationConfig.</p>
+<p><strong>RBAC:</strong> RbacUser, RbacRole, RbacPermission, RbacUserRole, RbacRolePermission, RbacResourceType, RbacActionType, RbacTokenBlacklist, RbacAuditTrail.</p>
+<p><strong>Risk profile:</strong> RiskProfile, AiRiskProfile, RiskQuestion, RiskQuestionOption, RiskQuestionCategory, AssessmentTemplate, TemplateRatio, ManualAssessmentSession, SessionQuestion, SessionAnswer, FriendlySummary, AuditLog, RiskProfileUserLock, RiskProfileUserCycle.</p>
+<p><strong>NAV (migration):</strong> FundNavMysqlEntity (for Mongo→MySQL NAV migration).</p>
+<h3 id="32-document-mongodb">3.2 Document (MongoDB)</h3>
+<p>No JPA entities; access via <strong>MongoClient</strong> and <strong>MongoCollection<Document></strong>:</p>
+<ul>
+<li><strong>NAV:</strong> Database <code>mf_navs</code> (configurable), collection <code>navs</code> — raw NAV from MFAPI ingestion; read by MongoNavReaderService, NavMongoToMysqlMigrationService, FundSyncService.</li>
+<li><strong>Credit reports:</strong> Database from <code>mongodb.credit-reports.database</code> (default <code>mf_navs</code>), collection <code>credit_reports</code> — parsed report JSON, raw_text (capped), processing_status, extraction_confidence_score, created_at.</li>
+<li><strong>Kyckart raw:</strong> Collection <code>kyckart_credit_report_raw</code> — raw Kyckart API response (redacted; no full base64); written by CreditReportService.</li>
+</ul>
+<h3 id="33-nav-fund-models-non-entity">3.3 NAV / Fund Models (Non-Entity)</h3>
+<ul>
+<li><strong>model/mf/IngestionState</strong> — Mapped to/from MongoDB Document.</li>
+<li><strong>model/mf/NavData</strong> — NAV document shape for MongoDB <code>navs</code>.</li>
+<li><strong>nav/metrics:</strong> FundNavMetricEntity, FundMetricsNormalizedEntity (normalized metrics and fund risk score in MySQL).</li>
+</ul>
+<hr />
+<h2 id="4-business-logic">4. Business Logic</h2>
+<h3 id="41-user-risk-score-credit-bureau-based">4.1 User Risk Score (Credit-Bureau-Based)</h3>
+<ul>
+<li><strong>Location:</strong> UserRiskCalculatorService, RiskScoringConfigService; formulas documented in <code>backend/docs/USER-RISK-SCORE-FORMULAS.md</code>.</li>
+<li><strong>Input:</strong> CreditReportDto (from parsed credit report or direct API): age, creditScore, EMIs, limits, utilization, DPD, write-offs, loans, income proxies, behavioral flags, extractionConfidenceScore.</li>
+<li><strong>Process:</strong>  </li>
+<li>Estimated monthly income from up to four proxies (EMI/FOIR, credit limit, secured loan, collateral) with configurable weights and FOIR rules.  </li>
+<li>DTI and utilization computed and normalized.  </li>
+<li>Eight components (each 1–1000): credit score, income, DTI, utilization, repayment history, loan mix, age, city tier. Weights configurable via <code>application_config</code> (e.g. credit 18%, income 18%, DTI 18%, utilization 9%, repayment 9%, loan mix 9%, age 9%, city tier 10%).  </li>
+<li>Weighted sum with redistribution over finite components → raw score → clamp and round → <strong>score (1–1000)</strong>.  </li>
+<li>Post-adjustments: low income reliability cap; extraction confidence and thin file affect <strong>risk_confidence</strong> only.  </li>
+<li><strong>Risk bucket:</strong> Secure (≤200), Conservative (≤400), Moderate (≤600), Growth (≤800), Aggressive (&gt;800).  </li>
+<li><strong>Config:</strong> All thresholds and weights from <code>application_config</code> (RiskScoringConfigService; 5-minute cache). Key keys: <code>risk_scoring.*</code> (bucket boundaries, income caps, weights, city tier, extraction_confidence_min, etc.), <code>credit_report_freshness_days</code>.</li>
+</ul>
+<h3 id="42-fund-risk-score">4.2 Fund Risk Score</h3>
+<ul>
+<li><strong>Location:</strong> FundMetricsNormalizationService, FundMetricsNormalizedWriterService.</li>
+<li><strong>Input:</strong> fund_nav_metrics (volatility, max_drawdown, downside_deviation, etc.).</li>
+<li><strong>Process:</strong> Normalize metrics and compute <strong>fund risk score</strong> (e.g. 0.40×Vol + 0.35×Drawdown + 0.25×DownsideDev), scale 1–1000; persist to <code>fund_metrics_normalized</code>.</li>
+</ul>
+<h3 id="43-questionnaire-risk-profile">4.3 Questionnaire Risk Profile</h3>
+<ul>
+<li><strong>Location:</strong> RiskAnalysisEngineService, ManualAssessmentService; band logic in RiskScoreBand.</li>
+<li><strong>Process:</strong> Category scores from session answers → composite score (1–1000) → RiskScoreBand (band/subBand) → behavioral insights and recommended actions; persist RiskProfile, FriendlySummary, AuditLog. Version SCORE_VERSION v1.0. PdfReportService generates DOCX/PDF risk report.</li>
+</ul>
+<h3 id="44-asset-allocation-and-product-filtering">4.4 Asset Allocation and Product Filtering</h3>
+<ul>
+<li><strong>Location:</strong> AssetAllocationService, RiskAssetAllocationConfig.</li>
+<li><strong>Process:</strong> Load UserRiskScore and RiskAssetAllocationConfig for user; validate allocation sums; map allocation columns to scheme categories; <strong>find matching funds</strong> by comparing fund_risk_score (from fund_metrics_normalized) to user score — gap thresholds <strong>Strong</strong> (e.g. ≤75) and <strong>Acceptable</strong> (e.g. ≤150) from config (<code>risk_scoring.gap_threshold_strong</code>, <code>risk_scoring.gap_threshold_acceptable</code>). No separate recommendation engine; historical recommendation columns removed (migration 054).</li>
+</ul>
+<h3 id="45-product-service">4.5 Product Service</h3>
+<ul>
+<li>ProductService returns country products with localization; product filtering for allocation is done inside AssetAllocationService via fund risk score gap (see above).</li>
+</ul>
+<hr />
+<h2 id="5-data-architecture">5. Data Architecture</h2>
+<h3 id="51-mysql">5.1 MySQL</h3>
+<ul>
+<li><strong>Config:</strong> <code>quarkus.datasource</code> in <code>application.yml</code> — JDBC URL from env (DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD), pool min 5 / max 20, acquisition-timeout 45s.</li>
+<li><strong>Hibernate:</strong> <code>database.generation: none</code>, <code>schema-management.strategy: none</code>; naming: CamelCaseToUnderscoresNamingStrategy.</li>
+<li><strong>Usage:</strong> All Panache entities; direct JDBC (AgroalDataSource) for NAV migration, metrics, and allocation queries. Repositories use Panache static finders or custom repositories (e.g. riskprofile, FundNavMysqlRepository).</li>
+</ul>
+<h3 id="52-mongodb">5.2 MongoDB</h3>
+<ul>
+<li><strong>Config:</strong> <code>quarkus.mongodb.connection-string</code>, <code>mongodb.database</code> (e.g. mf_navs); <code>mongodb.credit-reports.database</code>, <code>mongodb.credit-reports.collection</code> (credit_reports); <code>mongodb.kyckart-raw.collection</code> (kyckart_credit_report_raw).</li>
+<li><strong>Usage:</strong> NAV raw storage and read path; credit report storage (CreditReportMongoRepository); Kyckart raw storage (KyckartCreditReportRawMongoRepository). Indexes for credit reports ensured at startup by CreditReportMongoIndexInitializer.</li>
+</ul>
+<h3 id="53-nav-financial-data-flow">5.3 NAV / Financial Data Flow</h3>
+<ol>
+<li><strong>Ingestion:</strong> MfApiClient (https://api.mfapi.in) → NavIngestionService writes to MongoDB <code>navs</code>.</li>
+<li><strong>Migration:</strong> NavMongoToMysqlMigrationService reads MongoDB <code>navs</code>; NavMysqlWriterService / FundNavMysqlRepository write to MySQL <code>fund_navs</code>. Allowed AMCs/categories via <code>nav.migration.allowed-amcs</code>, <code>nav.migration.allowed-categories</code>.</li>
+<li><strong>Fund sync:</strong> FundSyncService syncs <code>funds</code> from MongoDB (or MySQL) with AMC/category filters; optional <code>nav.fund.sync-only-active</code>.</li>
+<li><strong>Metrics:</strong> NavMetricsCalculationService reads fund_navs → NavMetricsWriterService → <code>fund_nav_metrics</code>.</li>
+<li><strong>Normalization:</strong> FundMetricsNormalizationService reads fund_nav_metrics, computes fund risk score → FundMetricsNormalizedWriterService → <code>fund_metrics_normalized</code>.</li>
+<li><strong>Scheduler:</strong> NavDailyRunScheduler runs the full pipeline (MFAPI → MongoDB → MySQL → metrics → normalization). NavPipelineProgressService tracks progress.</li>
+</ol>
+<h3 id="54-database-migrations-and-schema">5.4 Database Migrations and Schema</h3>
+<ul>
+<li><strong>Migrations:</strong> <code>database/migrations/</code> — many numbered migrations (e.g. 001–078) for risk profile, consent, user risk, funds, notifications, family, etc. Applied manually (e.g. <code>run-all-migrations.ps1</code>); Flyway disabled.</li>
+<li><strong>Schema:</strong> <code>database/schema/</code> — full schema scripts (01–33+) for initial setup and reference (master, RBAC, sign-in, consent, risk profile, fund tables, etc.). See <code>database/README.md</code> for setup and account number generation.</li>
+</ul>
+<hr />
+<h2 id="6-external-integrations">6. External Integrations</h2>
+<table>
+<thead>
+<tr>
+<th>System</th>
+<th>Config / Env</th>
+<th>Client / Service</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CRM (ERPNext)</strong></td>
+<td>multiplus.crm.enabled, crm.api.url, api-key, api-secret, master-key</td>
+<td>ERPNextIntegrationService (HttpURLConnection), CrmService</td>
+<td>Lead create/update, KYC push</td>
+</tr>
+<tr>
+<td><strong>Kyckart</strong></td>
+<td>kyckart.base-url, kyckart.api.url, api.key</td>
+<td>CreditReportService (HttpClient), PanVerificationService, BankVerificationService, KycKartService</td>
+<td>PAN verify, bank/UPI verify, mobileToCreditReport</td>
+</tr>
+<tr>
+<td><strong>MFAPI</strong></td>
+<td>multiplus.mf.api.base-url (MF_API_BASE_URL), timeout-seconds</td>
+<td>MfApiClient (JAX-RS Client)</td>
+<td>Fund list, NAV data for ingestion</td>
+</tr>
+<tr>
+<td><strong>SMS</strong></td>
+<td>multiplus.sms.provider, api-key, api-secret, sender-id</td>
+<td>SmsService, SmsProviderFactory, TwilioSmsProvider</td>
+<td>OTP / SMS</td>
+</tr>
+<tr>
+<td><strong>Email</strong></td>
+<td>SMTP_*, MAIL_FROM; multiplus.mail</td>
+<td>Quarkus Mailer</td>
+<td>Verification, notifications</td>
+</tr>
+<tr>
+<td><strong>WhatsApp</strong></td>
+<td>whatsapp.verify.token, app.secret, phone.number.id, access.token, research.link, consent.purpose</td>
+<td>WhatsAppService (HttpClient), WhatsAppOnboardingPersistenceService, WebhookMessageProcessor</td>
+<td>Webhook, onboarding, consent</td>
+</tr>
+<tr>
+<td><strong>S3</strong></td>
+<td>documents.s3.enabled, bucket-name, region, accessKey, secretKey, masterKey (encryption)</td>
+<td>AwsS3Service (AWS SDK S3)</td>
+<td>Document storage</td>
+</tr>
+<tr>
+<td><strong>Geo-IP</strong></td>
+<td>geo-ip.api-url</td>
+<td>Used for country-from-IP</td>
+<td>Localization / country</td>
+</tr>
+</tbody>
+</table>
+<p>All application config is under <code>com.multiplus.config.ApplicationConfig</code> (SmallRye ConfigMapping, prefix <code>multiplus</code>) and nested interfaces (CrmConfig, KyckartConfig, MfConfig, DocumentsConfig, etc.). Secrets and env-specific values are in <code>.env</code>; see <code>backend/docs/CREDENTIALS_AND_ENV.md</code>.</p>
+<hr />
+<h2 id="7-document-processing">7. Document Processing</h2>
+<h3 id="71-upload-and-storage">7.1 Upload and Storage</h3>
+<ul>
+<li><strong>Controller:</strong> DocumentUploadController — <code>/api/v1/documents</code>: upload by type, list, download; file signature validation (magic bytes).</li>
+<li><strong>Service:</strong> DocumentUploadService — Document type mapping (PAN, Aadhaar, bank book, etc.), validation, temp file or S3 upload, CustomerDocument entity (MySQL), optional encryption.</li>
+<li><strong>Storage:</strong> AwsS3Service — S3 init from config (optional), put/get/delete, encryption support. Config: <code>multiplus.documents.upload</code> (max-size-mb, allowed-types, temp-dir), <code>documents.s3</code> (enabled, bucket, region, keys).</li>
+</ul>
+<h3 id="72-credit-report-pdf-pipeline">7.2 Credit Report PDF Pipeline</h3>
+<ul>
+<li><strong>Location:</strong> CreditReportProcessingService, CreditReportMongoRepository.</li>
+<li><strong>Flow:</strong> Base64 decode → Apache PDFBox PDFTextStripper → preprocess/normalize → parse full report to structured JSON (Experian-style sections, account blocks, regex/value-after-label) → validateParsedReport, computeExtractionConfidence → store in MongoDB <code>credit_reports</code> (report_json, raw_text cap, processing_status, extraction_confidence_score). Image-only PDFs: store failure, no scoring.</li>
+<li><strong>Ref:</strong> <code>backend/docs/SYSTEM-DOCUMENTATION.md</code> describes credit report flow, freshness, Kyckart, PDF vs direct JSON path, and MongoDB fields.</li>
+</ul>
+<hr />
+<h2 id="8-existing-analytics-ai-logic">8. Existing Analytics / AI Logic</h2>
+<h3 id="81-rule-based-and-formula-based">8.1 Rule-Based and Formula-Based</h3>
+<ul>
+<li><strong>User risk (credit):</strong> UserRiskCalculatorService — weighted formula (eight components, configurable weights); no ML. RiskVariableDerivationService derives variables from credit report JSON; UserRiskOrchestrationService coordinates job lock, Kyckart call, derive → compute → persist. RiskScoreComputedEvent fired on new score.</li>
+<li><strong>Fund risk:</strong> FundMetricsNormalizationService — fund risk score from volatility, drawdown, downside deviation; persisted to fund_metrics_normalized.</li>
+<li><strong>Questionnaire risk profile:</strong> RiskAnalysisEngineService — composite score and band from session answers; ManualAssessmentService; PdfReportService for DOCX/PDF report.</li>
+</ul>
+<h3 id="82-ai-risk-profile-endpoint">8.2 AI Risk Profile Endpoint</h3>
+<ul>
+<li>AiRiskAnalysisResource (<code>/api/v1/riskprofile/ai</code>) — run/initiate deprecated (410); only fetch existing report; <strong>no active AI model pipeline</strong> in codebase.</li>
+</ul>
+<h3 id="83-recommendations">8.3 Recommendations</h3>
+<ul>
+<li>AssetAllocationService returns allocation and “matching funds” by risk score gap (Strong/Acceptable) only; no separate recommendation or ML engine.</li>
+</ul>
+<h3 id="84-dependencies">8.4 Dependencies</h3>
+<ul>
+<li>No ML/AI runtime dependencies in <code>pom.xml</code>. All current “analytics” are rule-based and formula-based (user risk, fund risk, questionnaire composite score).</li>
+</ul>
+<hr />
+<h2 id="9-summary-and-integration-notes">9. Summary and Integration Notes</h2>
+<ul>
+<li><strong>Backend:</strong> Single Quarkus app; REST under <code>/api/v1/</code> and <code>/api/</code>; MySQL for transactional and config data; MongoDB for NAV raw and credit reports; NAV pipeline (MFAPI → Mongo → MySQL → metrics → fund risk score) runs on a schedule.</li>
+<li><strong>User risk:</strong> Credit report from Kyckart (or reuse if fresh) → parse (PDF or JSON) → derive variables → config-driven user risk score and bucket → allocation bands and matching funds by fund risk score gap.</li>
+<li><strong>Risk profile:</strong> Questionnaire-based risk score and report; AI risk endpoint exists but is deprecated with no active model.</li>
+<li><strong>Documents:</strong> Upload/store (local or S3); credit report PDF parsing and storage in MongoDB for risk pipeline.</li>
+<li><strong>Integrations:</strong> CRM (ERPNext), Kyckart, MFAPI, SMS (Twilio), email, WhatsApp, S3, Geo-IP; all configured via <code>ApplicationConfig</code> and env.</li>
+</ul>
+<p>This document should be updated as the codebase evolves and when the AI platform is integrated (e.g. new services, new data flows, and replacement or extension of the deprecated AI risk endpoint).</p>

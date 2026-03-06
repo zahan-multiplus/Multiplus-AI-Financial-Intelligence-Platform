@@ -1,0 +1,165 @@
+<h1 id="multiplus-ai-integration-architecture">Multiplus AI Integration Architecture</h1>
+<p><strong>Purpose:</strong> Define how AI modules integrate with the existing Quarkus backend without redesigning the platform. The backend remains the core system; AI provides reasoning, explanation, document understanding, and insight generation only.</p>
+<p><strong>Scope:</strong> High-level architecture, component responsibilities, communication patterns, and interaction with existing services. No diagram generation; no platform redesign.</p>
+<hr />
+<h2 id="1-ai-integration-principles">1. AI Integration Principles</h2>
+<ol>
+<li>
+<p><strong>Quarkus backend is the core.</strong> All user-facing APIs, authentication, business orchestration, and deterministic financial logic (risk scoring, allocation, fund matching) remain in the Quarkus monolith. AI is a set of capabilities invoked by the backend when needed.</p>
+</li>
+<li>
+<p><strong>AI augments; it does not replace.</strong> Deterministic rules (UserRiskCalculatorService, RiskScoringConfigService, AssetAllocationService, FundMetricsNormalizationService, questionnaire scoring) stay in the backend. AI adds natural-language explanations, document extraction, recommendation reasoning, and insights. No financial decision (score, allocation, suitability) is made solely by AI.</p>
+</li>
+<li>
+<p><strong>Single entry point from backend.</strong> The backend does not call individual AI subsystems directly from every use case. An <strong>AI Gateway</strong> (or equivalent facade) is the single contact point. The backend calls the gateway with a request type and context; the gateway routes to the appropriate AI component(s) and returns a response. This keeps backend code simple and allows AI-side routing and versioning.</p>
+</li>
+<li>
+<p><strong>Inference is outside the application server.</strong> Model inference (LLM, embeddings, document models) runs in a <strong>Model Serving Layer</strong> (e.g. vLLM, Ollama, or similar) on separate infrastructure (e.g. GPU-enabled nodes). The Quarkus process never loads model weights. AI components (orchestrator, document intelligence, etc.) call the model serving layer over HTTP/gRPC. This preserves backend stability and allows independent scaling of inference.</p>
+</li>
+<li>
+<p><strong>AI data pipelines are co-located with AI services.</strong> Document processing pipelines (OCR, extraction, embedding) and any batch insight or embedding jobs run in the same deployment boundary as the AI services (e.g. same cluster or network), not inside the Quarkus JVM. They read from and write to the same storage (S3, MongoDB, MySQL) that the platform already uses, via defined contracts (e.g. document table, extraction result schema).</p>
+</li>
+<li>
+<p><strong>Existing storage is the source of truth.</strong> AI reads from MySQL (risk scores, allocation, profile, product data), MongoDB (documents, credit reports, NAV raw if needed), and S3 (uploaded documents). AI writes extraction results, embeddings, or generated text to agreed stores or returns them in API responses for the backend to persist. No separate “AI database” that duplicates financial data; optional dedicated stores only for embeddings or model artifacts if needed.</p>
+</li>
+<li>
+<p><strong>Fail-safe and degradable.</strong> If the AI gateway or model serving layer is unavailable or slow, the backend can skip AI (e.g. no explanation, or a static message) and still return deterministic results (score, allocation, matching funds). No user-facing flow depends solely on AI for core data.</p>
+</li>
+</ol>
+<hr />
+<h2 id="2-high-level-ai-integration-architecture">2. High-Level AI Integration Architecture</h2>
+<p><strong>Where AI services live</strong><br />
+AI services (Gateway, Orchestrator, Document Intelligence, Recommendation Reasoning, Financial Insight, Trigger Engine) run as separate deployable units—e.g. separate processes, containers, or a dedicated “AI runtime” layer—on the same network as the Quarkus backend. They are not JAX-RS resources inside the Quarkus app. This keeps the monolith free of model dependencies and allows AI to be scaled, updated, or swapped independently.</p>
+<p><strong>How Quarkus communicates with AI</strong><br />
+Quarkus communicates with the AI layer through a single <strong>AI Gateway</strong> over HTTP/REST (or gRPC). The backend sends requests with a type (e.g. <code>explain_risk_score</code>, <code>explain_allocation</code>, <code>extract_document</code>, <code>generate_insight</code>) and a JSON payload (user id, account number, score, allocation result, document reference, etc.). The gateway returns a response (explanation text, extracted entities, insight payload) or an error. The backend does not need to know which internal AI component handled the request. Optionally, for fire-and-forget or event-driven flows, the backend (or a trigger engine) publishes events to a message queue or event bus, and AI components consume them asynchronously.</p>
+<p><strong>Where model inference happens</strong><br />
+Model inference runs in the <strong>Model Serving Layer</strong>: a separate service (e.g. vLLM, Ollama, or a custom inference API) that loads model weights and exposes completion/embedding endpoints. It runs on GPU-capable infrastructure when needed. All AI components that need LLM or embedding calls invoke this layer over the network. The Quarkus backend never talks to the model server directly; it only talks to the AI Gateway (or Orchestrator).</p>
+<p><strong>Where AI data pipelines run</strong><br />
+AI data pipelines (e.g. document OCR + extraction, batch embedding of documents, scheduled insight generation) run as jobs or workers in the same deployment boundary as the AI services. They may be triggered by the <strong>Trigger Engine</strong> (on schedule or on event) or by an explicit backend call (e.g. “process this document”). They read from S3, MongoDB, or MySQL and write results back to those stores or to the AI Gateway for synchronous return. They do not run inside the Quarkus JVM.</p>
+<hr />
+<h2 id="3-ai-system-components">3. AI System Components</h2>
+<h3 id="31-ai-gateway">3.1 AI Gateway</h3>
+<p><strong>Responsibility</strong><br />
+Single entry point for all AI requests from the Quarkus backend. Accepts a request type and payload, routes to the correct AI component (Orchestrator, Document Intelligence, Recommendation Reasoning, Financial Insight), and returns a unified response (text, structured JSON, or error). Handles auth (e.g. service-to-service token or network-level trust), rate limiting, and timeouts so the backend has a simple, stable contract.</p>
+<p><strong>How it interacts with Quarkus</strong><br />
+Quarkus calls the AI Gateway over HTTP (e.g. <code>POST /ai/v1/request</code> or dedicated paths per use case). Request body includes <code>type</code> (e.g. <code>explain_risk_score</code>, <code>explain_allocation</code>, <code>extract_document</code>, <code>financial_insight</code>) and <code>context</code> (ids, scores, allocation, document ref, etc.). Gateway responds synchronously with the result or a timeout/error. Quarkus treats the gateway as an external HTTP client; no shared libraries or in-process calls.</p>
+<p><strong>Data sources used</strong><br />
+Gateway itself is stateless; it does not read from MySQL/MongoDB/S3. Downstream AI components that the gateway invokes use platform data (see below).</p>
+<hr />
+<h3 id="32-ai-orchestrator">3.2 AI Orchestrator</h3>
+<p><strong>Responsibility</strong><br />
+For requests that need multi-step reasoning or coordination (e.g. “explain this user’s allocation”), the Orchestrator prepares context by gathering data (e.g. user risk score, allocation result, matching funds, product metadata), builds a prompt or structured input, calls the Model Serving Layer (LLM), and optionally validates or structures the output before returning it to the gateway. It is the “brain” for explanation and insight flows that require one or more LLM calls with platform data.</p>
+<p><strong>How it interacts with Quarkus</strong><br />
+Quarkus does not call the Orchestrator directly. The AI Gateway receives a request from Quarkus and invokes the Orchestrator (or a service that wraps it) for explanation/insight types. The Orchestrator may call backend read APIs (e.g. allocation, product list) if the gateway did not pass full context, or it may receive all context in the gateway payload to avoid extra round-trips. Preferred: gateway payload carries all necessary context so Orchestrator is stateless and does not call back into Quarkus.</p>
+<p><strong>Data sources used</strong><br />
+Orchestrator uses data passed in the request (risk score, allocation, funds, profile summary). If needed, it can read from MySQL/MongoDB via a dedicated read-only data access layer or API exposed for AI, to avoid embedding Quarkus internals. Optional: vector store for RAG (e.g. product or document embeddings) for future richer reasoning.</p>
+<hr />
+<h3 id="33-document-intelligence-service">3.3 Document Intelligence Service</h3>
+<p><strong>Responsibility</strong><br />
+Handles document understanding: OCR for scanned/images, entity extraction (e.g. CAS, bank statement, insurance), and conversion to structured data. Runs in the AI layer; can call the Model Serving Layer for LLM-based extraction or use dedicated document models. Writes extraction results to the platform’s storage (e.g. MongoDB collection or MySQL table) or returns them to the gateway so the backend can persist. Does not replace existing credit-report PDF pipeline; can extend it or handle other document types.</p>
+<p><strong>How it interacts with Quarkus</strong><br />
+(1) <strong>Synchronous:</strong> Backend uploads a document (existing flow); later, when “extract” is needed, Quarkus calls the AI Gateway with type <code>extract_document</code> and document reference (e.g. S3 key or storage id). Gateway delegates to Document Intelligence Service; service reads document from S3 (or URL), runs OCR/extraction, returns structured result; backend saves it. (2) <strong>Asynchronous:</strong> Backend or Trigger Engine publishes “document ready” event; Document Intelligence Service consumes it, processes the document, and writes results to storage; backend polls or is notified. Either way, Quarkus does not perform OCR or extraction itself.</p>
+<p><strong>Data sources used</strong><br />
+Reads: document binary or URL from S3 (or platform document store). Writes: extraction result to MongoDB, MySQL, or back via API for backend to persist. May use Model Serving Layer for LLM-based extraction or embedding.</p>
+<hr />
+<h3 id="34-recommendation-reasoning-engine">3.4 Recommendation Reasoning Engine</h3>
+<p><strong>Responsibility</strong><br />
+Produces natural-language reasoning for <em>why</em> a set of funds or an allocation was recommended. It does not compute allocation or select funds; that remains in AssetAllocationService. Given inputs (user risk score, allocation result, matching funds, product metadata), it generates text explaining the rationale (risk alignment, gap closure, diversification, etc.) for display to the user or for audit.</p>
+<p><strong>How it interacts with Quarkus</strong><br />
+Quarkus calls the AI Gateway with type <code>explain_allocation</code> (or <code>recommendation_reasoning</code>) and payload containing allocation result and matching funds (and optionally risk profile summary). Gateway routes to Recommendation Reasoning Engine (or Orchestrator that implements this). Engine calls Model Serving Layer with structured context; returns explanation text to gateway → backend. Backend attaches explanation to the allocation API response or stores it. Synchronous call from backend when user requests allocation + explanation.</p>
+<p><strong>Data sources used</strong><br />
+All context is provided in the request from the backend (allocation, funds, risk score). No direct DB access required if backend sends a rich payload. Optional: product or document embeddings from vector store for richer narrative.</p>
+<hr />
+<h3 id="35-financial-insight-engine">3.5 Financial Insight Engine</h3>
+<p><strong>Responsibility</strong><br />
+Generates narrative insights from financial data (e.g. profile summary, portfolio snapshot, risk score, behavioral cues). Used for dashboard insights, notification content, or report narrative. Does not compute scores or allocation; it only turns existing platform outputs into readable summaries or alerts.</p>
+<p><strong>How it interacts with Quarkus</strong><br />
+(1) <strong>Synchronous:</strong> Backend requests “insight for user X” via AI Gateway (e.g. type <code>financial_insight</code>); Gateway invokes Financial Insight Engine with context (profile, score, allocation, recent activity if any); Engine returns text; backend sends to UI or notification. (2) <strong>Asynchronous / scheduled:</strong> Trigger Engine or scheduler runs a job that pulls users needing insight, calls Financial Insight Engine with data, and writes results to DB or pushes to Notification system (via backend API or event). Backend notification services (SmsService, Mailer, WhatsApp) send the content; they do not call AI themselves—they send pre-generated content or the backend fetches insight and then sends.</p>
+<p><strong>Data sources used</strong><br />
+Context passed in the request (profile, score, allocation, optional portfolio). For batch/scheduled insights, the Trigger Engine or a job may read from MySQL/MongoDB (via read API or dedicated read path) to build the payload for the Insight Engine.</p>
+<hr />
+<h3 id="36-trigger-engine">3.6 Trigger Engine</h3>
+<p><strong>Responsibility</strong><br />
+Listens for platform events (e.g. risk score computed, document uploaded, allocation viewed) or runs on a schedule, and triggers AI workflows without the user waiting. Examples: “when risk score is computed, generate explanation and cache it”; “when document is uploaded, run extraction”; “nightly, generate insights for active users.” It decides <em>when</em> to call which AI component and with what payload; it does not perform inference itself.</p>
+<p><strong>How it interacts with Quarkus</strong><br />
+(1) <strong>Event-driven:</strong> Backend (or existing event emitter) publishes events (e.g. RiskScoreComputedEvent) to a message queue or event bus. Trigger Engine consumes events, applies rules (e.g. dedupe, throttle), and invokes the AI Gateway or internal AI services (e.g. “generate explanation for this score”). Results can be written to cache/DB for later API response, or sent to notification. (2) <strong>Scheduled:</strong> Trigger Engine runs cron-like jobs that call AI (e.g. batch insight generation) and then invoke backend APIs or write to storage. Quarkus may expose a small “ingest AI result” or “notify” endpoint for the Trigger Engine to call. Quarkus does not run the trigger logic; it only emits events and optionally receives callbacks.</p>
+<p><strong>Data sources used</strong><br />
+Event payload (user id, score, document id, etc.). For scheduled jobs, Trigger Engine may read from MySQL/MongoDB (via read-only API or internal connector) to build batch payloads. Writes: AI results to cache, DB, or callback to backend.</p>
+<hr />
+<h3 id="37-model-serving-layer">3.7 Model Serving Layer</h3>
+<p><strong>Responsibility</strong><br />
+Loads and runs AI models (LLM, embedding, optional document models). Exposes HTTP/gRPC APIs for completion and optionally embedding. Handles batching, GPU utilization, and versioning. No business logic; pure inference.</p>
+<p><strong>How it interacts with Quarkus</strong><br />
+Quarkus does not call the Model Serving Layer. Only AI components (Orchestrator, Document Intelligence, Recommendation Reasoning, Financial Insight) call it. All interaction is inside the AI boundary. Quarkus → AI Gateway → (Orchestrator / Document Intelligence / etc.) → Model Serving Layer.</p>
+<p><strong>Data sources used</strong><br />
+Model artifacts (weights, config) from a registry or volume. No direct access to application MySQL/MongoDB/S3; context is passed from the calling AI component.</p>
+<hr />
+<h2 id="4-communication-patterns">4. Communication Patterns</h2>
+<p><strong>Synchronous API calls</strong><br />
+- <strong>Backend → AI Gateway:</strong> All user-initiated flows (e.g. “get risk explanation,” “get allocation explanation,” “extract this document”) are synchronous. Backend calls the gateway, waits for response (with a timeout, e.g. 10–30 s), and returns to the client or stores the result.<br />
+- <strong>AI Gateway → Orchestrator / Document Intelligence / Recommendation Reasoning / Financial Insight:</strong> Synchronous internal calls.<br />
+- <strong>AI components → Model Serving Layer:</strong> Synchronous HTTP/gRPC for completion and embedding.</p>
+<p><strong>Asynchronous events</strong><br />
+- <strong>Backend (or platform) → Trigger Engine:</strong> Events such as “risk score computed,” “document uploaded,” “allocation generated” are published to a queue or bus. Trigger Engine consumes asynchronously and invokes AI workflows.<br />
+- <strong>Trigger Engine → AI Gateway / AI services:</strong> Can be async (fire-and-forget) when the result is cached or written to DB for later retrieval, or when the result is pushed to notifications without the user waiting.</p>
+<p><strong>Scheduled jobs</strong><br />
+- <strong>Trigger Engine</strong> runs scheduled jobs (e.g. daily “generate insights for segment,” “re-embed documents”) that call AI services and then update storage or notify via backend.<br />
+- <strong>NAV and credit-report pipelines</strong> remain in the platform (Quarkus/scheduler); they are not moved to AI. Optional: after document pipeline writes to MongoDB, a Trigger Engine job could run “extract/embed” for new documents.</p>
+<hr />
+<h2 id="5-interaction-of-existing-services-with-ai">5. Interaction of Existing Services with AI</h2>
+<p><strong>UserRiskCalculatorService</strong><br />
+- Keeps full ownership of score and bucket computation (formula, weights, config). No AI in the calculation path.<br />
+- <strong>Interaction with AI:</strong> After a new score is computed, (1) Backend can call AI Gateway with <code>explain_risk_score</code> and payload (score, components, bucket) to get natural-language explanation and return it on the next “get score” or “get explanation” request. (2) Optionally, when RiskScoreComputedEvent is emitted, Trigger Engine consumes it and calls AI to pre-generate and cache the explanation. UserRiskCalculatorService does not call AI; the controller or a separate “explanation” endpoint calls the gateway.</p>
+<p><strong>AssetAllocationService</strong><br />
+- Keeps full ownership of allocation rules and matching funds (risk gap logic). No AI in the allocation path.<br />
+- <strong>Interaction with AI:</strong> When the user requests allocation <em>and</em> explanation, the backend first calls AssetAllocationService to get allocation and matching funds, then calls AI Gateway with <code>explain_allocation</code> and that result. Gateway (Recommendation Reasoning Engine or Orchestrator) returns explanation text; backend appends it to the response. AssetAllocationService does not call AI; the controller or a dedicated “allocation with explanation” flow does.</p>
+<p><strong>FundMetricsNormalizationService</strong><br />
+- Unchanged. Continues to compute fund risk score and persist to <code>fund_metrics_normalized</code>.<br />
+- <strong>Interaction with AI:</strong> AI never changes fund metrics. When generating recommendation reasoning or insights, the backend (or AI request payload) may include fund metrics or fund list; AI uses them only as context for text generation. No direct call from FundMetricsNormalizationService to AI.</p>
+<p><strong>PortfolioController</strong><br />
+- Keeps ownership of portfolio retrieval and any portfolio-related APIs (when implemented).<br />
+- <strong>Interaction with AI:</strong> When portfolio data exists, the backend can pass a summary (e.g. allocation, holdings) to the AI Gateway for “portfolio insight” or “allocation explanation.” PortfolioController (or a higher-level service) requests AI-generated content and attaches it to the response; it does not call AI directly. Same pattern: controller gets data from services, then calls AI Gateway for narrative.</p>
+<p><strong>Document pipelines</strong><br />
+- <strong>Upload/storage:</strong> DocumentUploadService and AwsS3Service stay as-is. Documents are stored; no AI in the upload path.<br />
+- <strong>Credit report PDF:</strong> CreditReportProcessingService stays as-is. Optionally, Document Intelligence Service can be invoked for “hard” cases or for additional extraction; result can be merged or stored.<br />
+- <strong>Other documents (CAS, bank, insurance):</strong> When the user requests extraction (or when a document is tagged for extraction), the backend sends the document reference to the AI Gateway (<code>extract_document</code>). Document Intelligence Service runs OCR/extraction and returns structured data; backend (or Trigger Engine) persists it. Pipeline “runs” in the AI layer; the platform pipeline remains for upload, validation, and storage; extraction is delegated to AI.</p>
+<hr />
+<h2 id="6-deterministic-logic-remaining-in-the-platform">6. Deterministic Logic Remaining in the Platform</h2>
+<p>The following stay entirely in the Quarkus backend and are not replaced or overridden by AI:</p>
+<ul>
+<li>User risk score formula and bucket (UserRiskCalculatorService, RiskScoringConfigService).  </li>
+<li>Questionnaire composite score and band (RiskAnalysisEngineService, ManualAssessmentService).  </li>
+<li>Fund risk score (FundMetricsNormalizationService).  </li>
+<li>Asset allocation rules and validation (AssetAllocationService, RiskAssetAllocationConfig).  </li>
+<li>Fund matching by risk gap (AssetAllocationService).  </li>
+<li>NAV ingestion and metrics pipeline (NavIngestionService, NavMetricsCalculationService, etc.).  </li>
+<li>Credit report PDF parsing (CreditReportProcessingService) unless explicitly extended with AI for specific steps.  </li>
+<li>Product catalog and filtering (ProductService).  </li>
+<li>Regulatory or business suitability rules (when implemented); AI does not enforce them.  </li>
+<li>Authentication, authorization, and API orchestration.</li>
+</ul>
+<p>AI only provides: <strong>reasoning</strong> (natural-language rationale for recommendations), <strong>explanation</strong> (risk score, allocation), <strong>document understanding</strong> (OCR, extraction for supported types), and <strong>insight generation</strong> (summaries, alerts, report narrative). All numeric and rule-based decisions remain in the platform.</p>
+<hr />
+<h2 id="7-service-interaction-model">7. Service Interaction Model</h2>
+<ul>
+<li><strong>Quarkus</strong> exposes all user-facing and internal APIs; it owns sessions, auth, and business flow.  </li>
+<li><strong>Quarkus → AI Gateway</strong> over HTTP (sync) for explanation, extraction, insight.  </li>
+<li><strong>AI Gateway</strong> routes to Orchestrator, Document Intelligence, Recommendation Reasoning, or Financial Insight; these may call <strong>Model Serving Layer</strong> for inference.  </li>
+<li><strong>Quarkus</strong> (or platform events) → <strong>Trigger Engine</strong> via events or scheduler; <strong>Trigger Engine</strong> → AI Gateway / AI services (sync or async).  </li>
+<li><strong>Document Intelligence</strong> and batch jobs read/write <strong>S3, MongoDB, MySQL</strong> via agreed contracts; Quarkus remains owner of schema and critical data.  </li>
+<li><strong>Model Serving Layer</strong> is used only by AI components; Quarkus has no direct dependency on it.</li>
+</ul>
+<hr />
+<h2 id="8-example-integration-flows">8. Example Integration Flows</h2>
+<p><strong>Flow 1: Risk score explanation (sync)</strong><br />
+User requests “explain my risk score.” Backend loads UserRiskScore (and components) from DB, calls AI Gateway <code>explain_risk_score</code> with score and components. Gateway invokes Orchestrator; Orchestrator builds prompt, calls Model Serving Layer (LLM), returns explanation text. Gateway returns to backend; backend sends explanation to client. UserRiskCalculatorService is not involved in this request; only the stored score is read.</p>
+<p><strong>Flow 2: Allocation with reasoning (sync)</strong><br />
+User requests allocation and “why these funds.” Backend calls AssetAllocationService → gets allocation and matching funds. Backend calls AI Gateway <code>explain_allocation</code> with allocation + funds + user risk summary. Gateway invokes Recommendation Reasoning Engine; Engine calls LLM with context, returns reasoning text. Backend appends reasoning to allocation response and returns to client.</p>
+<p><strong>Flow 3: Document extraction (sync or async)</strong><br />
+User uploads a CAS document (existing upload flow). Later, user or system requests extraction. Backend calls AI Gateway <code>extract_document</code> with document ref (e.g. S3 key). Gateway invokes Document Intelligence Service; Service fetches document from S3, runs OCR/extraction (and optionally LLM), returns structured entities. Backend stores result in MongoDB/MySQL and returns to client. Alternative: on upload, backend emits “document ready”; Trigger Engine runs extraction asynchronously and writes result; client polls or gets notified.</p>
+<p><strong>Flow 4: Pre-generated risk explanation (async)</strong><br />
+UserRiskOrchestrationService computes a new score and emits RiskScoreComputedEvent. Trigger Engine consumes event, calls AI Gateway <code>explain_risk_score</code> with score payload, receives explanation, writes to cache or DB (e.g. keyed by user/score id). When user later requests “explain my risk,” backend reads cached explanation and returns it (or calls AI if cache miss). Reduces latency for the user.</p>
+<p><strong>Flow 5: Scheduled financial insight (batch)</strong><br />
+Trigger Engine runs on schedule (e.g. daily). For a segment of users, it loads from MySQL (via read API or internal read) risk score, allocation summary, and recent activity. For each user, it calls AI Gateway <code>financial_insight</code> with that context; Financial Insight Engine returns short narrative. Trigger Engine writes insights to DB or calls backend “enqueue notification” API with content; backend Notification services (SmsService, Mailer, WhatsApp) send using existing logic. No AI inside Quarkus; only pre-generated content is sent.</p>
+<hr />
+<p><em>This document describes the intended AI integration architecture. Implementation details (endpoints, payload schemas, deployment topology) can be derived from this in a later phase.</em></p>

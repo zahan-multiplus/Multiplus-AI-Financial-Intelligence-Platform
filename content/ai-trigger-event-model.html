@@ -1,0 +1,582 @@
+<h1 id="ai-trigger-event-model-and-trigger-engine">AI Trigger Event Model and Trigger Engine</h1>
+<p><strong>Purpose:</strong> Define the event-driven automation layer used by the AI Trigger Engine. Events follow the platform schema in <code>PLATFORM_AI_DATA_SCHEMAS.md</code> (TriggerEvent). This document specifies event types, Trigger Engine behavior, example workflows, and scheduled triggers.</p>
+<p><strong>Scope:</strong> Event-driven AI automation only. No changes to existing platform code; documentation definition only.</p>
+<hr />
+<h2 id="1-trigger-event-model">1. Trigger Event Model</h2>
+<p>The AI system uses the <strong>TriggerEvent</strong> schema defined in <code>PLATFORM_AI_DATA_SCHEMAS.md</code>. Every event consumed by the Trigger Engine conforms to this structure.</p>
+<h3 id="11-schema-reference">1.1 Schema (Reference)</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>eventType</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Canonical event name (e.g. <code>RiskScoreComputed</code>, <code>DocumentUploaded</code>).</td>
+</tr>
+<tr>
+<td><code>entityType</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Primary entity category: <code>user</code>, <code>portfolio</code>, <code>document</code>, <code>recommendation</code>, <code>nav</code>.</td>
+</tr>
+<tr>
+<td><code>entityId</code></td>
+<td>string</td>
+<td>Yes</td>
+<td>Id of the primary entity (userId, portfolioId, documentId, recommendationId, etc.).</td>
+</tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>string (ISO 8601)</td>
+<td>Yes</td>
+<td>Event occurrence time.</td>
+</tr>
+<tr>
+<td><code>payload</code></td>
+<td>object</td>
+<td>Yes</td>
+<td>Event-specific data; structure depends on <code>eventType</code>.</td>
+</tr>
+<tr>
+<td><code>correlationId</code></td>
+<td>string | null</td>
+<td>No</td>
+<td>Optional id for distributed tracing and request correlation.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="12-transport-and-format">1.2 Transport and Format</h3>
+<ul>
+<li><strong>Format:</strong> JSON. Same shape whether events are published to a message queue (e.g. RabbitMQ, Kafka, SQS), event bus (e.g. SmallRye Reactive Messaging), or HTTP webhook.</li>
+<li><strong>Producer:</strong> Quarkus backend (or platform services) publishes events after state changes. Events are serialized as JSON and sent to the configured destination (topic, queue, or endpoint).</li>
+<li><strong>Consumer:</strong> The Trigger Engine subscribes to the same destination, deserializes JSON into TriggerEvent, and processes each event according to the rules defined below.</li>
+</ul>
+<h3 id="13-idempotency-and-deduplication">1.3 Idempotency and Deduplication</h3>
+<ul>
+<li>Events may be delivered more than once (at-least-once). The Trigger Engine should use a <strong>deduplication key</strong> (e.g. <code>eventType</code> + <code>entityType</code> + <code>entityId</code> + optional <code>timestamp</code> window) to avoid running the same AI workflow twice for the same logical occurrence.</li>
+<li>Optional: include a unique <code>eventId</code> in the payload or as a top-level field for idempotent processing and audit.</li>
+</ul>
+<hr />
+<h2 id="2-core-trigger-event-types">2. Core Trigger Event Types</h2>
+<h3 id="21-riskscorecomputed">2.1 RiskScoreComputed</h3>
+<p><strong>Description:</strong> Emitted when a user’s risk score has been (re)computed and persisted. Used to pre-generate risk explanations so that when the user requests “Explain my risk,” the backend can return a cached explanation without calling the AI Gateway synchronously.</p>
+<p><strong>Entity type:</strong> <code>user</code></p>
+<p><strong>Typical payload fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>userId</code></td>
+<td>string</td>
+<td>User whose score was computed.</td>
+</tr>
+<tr>
+<td><code>riskScore</code></td>
+<td>number</td>
+<td>Final score (e.g. 1–1000).</td>
+</tr>
+<tr>
+<td><code>riskBand</code></td>
+<td>string</td>
+<td>Risk bucket (Secure, Conservative, Moderate, Growth, Aggressive).</td>
+</tr>
+<tr>
+<td><code>components</code></td>
+<td>object | null</td>
+<td>Optional component breakdown (credit, income, DTI, etc.).</td>
+</tr>
+<tr>
+<td><code>source</code></td>
+<td>string | null</td>
+<td>Optional: <code>credit</code>, <code>questionnaire</code>, <code>hybrid</code>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Emitted by:</strong> Backend domain logic after <strong>UserRiskOrchestrationService</strong> (or equivalent) persists a new <strong>UserRiskScore</strong> (e.g. after Kyckart + derive + compute, or after questionnaire submission). Fired after transaction commit or via a transactional event publisher.</p>
+<p><strong>AI workflow triggered:</strong> <strong>Generate risk explanation</strong> → call AI Gateway <code>POST /ai/explain-risk-score</code> with context built from payload → store result in explanation cache (e.g. keyed by <code>userId</code> and optionally <code>riskScore</code> or version).</p>
+<hr />
+<h3 id="22-allocationgenerated">2.2 AllocationGenerated</h3>
+<p><strong>Description:</strong> Emitted when a recommendation (allocation + matching funds) has been generated for a user. Used to pre-generate allocation explanation and/or recommendation reasoning so that the user sees instant explanation when viewing the recommendation.</p>
+<p><strong>Entity type:</strong> <code>recommendation</code></p>
+<p><strong>Typical payload fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>userId</code></td>
+<td>string</td>
+<td>User for whom allocation was generated.</td>
+</tr>
+<tr>
+<td><code>recommendationId</code></td>
+<td>string</td>
+<td>Platform recommendation id.</td>
+</tr>
+<tr>
+<td><code>allocation</code></td>
+<td>object</td>
+<td>Target allocation by asset class.</td>
+</tr>
+<tr>
+<td><code>recommendedFunds</code></td>
+<td>array</td>
+<td>List of recommended schemes (id, name, category, allocation %, fundRiskScore).</td>
+</tr>
+<tr>
+<td><code>riskBand</code></td>
+<td>string</td>
+<td>User risk band used for allocation.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Emitted by:</strong> Backend after <strong>AssetAllocationService</strong> (or future recommendation service) produces and persists a new recommendation (e.g. when user requests allocation or when a scheduled job generates recommendations).</p>
+<p><strong>AI workflow triggered:</strong> <strong>Generate allocation explanation</strong> and/or <strong>recommendation reasoning</strong> → call AI Gateway <code>POST /ai/explain-allocation</code> and/or <code>POST /ai/recommendation-reasoning</code> with FinancialProfile + Recommendation built from payload (and any data the Trigger Engine can read) → store result in cache keyed by <code>recommendationId</code> or <code>userId</code> + recommendation version.</p>
+<hr />
+<h3 id="23-portfoliocreated">2.3 PortfolioCreated</h3>
+<p><strong>Description:</strong> Emitted when a new portfolio is created for a user (e.g. first investment or first linked account). Used to generate an initial portfolio insight or onboarding message.</p>
+<p><strong>Entity type:</strong> <code>portfolio</code></p>
+<p><strong>Typical payload fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>portfolioId</code></td>
+<td>string</td>
+<td>New portfolio id.</td>
+</tr>
+<tr>
+<td><code>userId</code></td>
+<td>string</td>
+<td>Owner.</td>
+</tr>
+<tr>
+<td><code>holdings</code></td>
+<td>array | null</td>
+<td>Initial holdings if any; may be empty.</td>
+</tr>
+<tr>
+<td><code>currentValue</code></td>
+<td>number</td>
+<td>Initial value (may be 0).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Emitted by:</strong> Backend <strong>PortfolioController</strong> or portfolio service when a new portfolio record is created (e.g. first “create portfolio” or “link account” flow).</p>
+<p><strong>AI workflow triggered:</strong> <strong>Generate portfolio insight</strong> → call AI Gateway <code>POST /ai/generate-insight</code> with FinancialProfile + Portfolio (from payload or fetched via backend read API) → attach insight to portfolio record (e.g. store in DB or cache keyed by <code>portfolioId</code>) or send via notification.</p>
+<hr />
+<h3 id="24-portfoliorebalanced">2.4 PortfolioRebalanced</h3>
+<p><strong>Description:</strong> Emitted when a portfolio’s allocation has changed significantly (e.g. after rebalancing or after substantial inflows/outflows). Used to generate an insight about the new allocation or a rebalancing summary.</p>
+<p><strong>Entity type:</strong> <code>portfolio</code></p>
+<p><strong>Typical payload fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>portfolioId</code></td>
+<td>string</td>
+<td>Portfolio that was rebalanced.</td>
+</tr>
+<tr>
+<td><code>userId</code></td>
+<td>string</td>
+<td>Owner.</td>
+</tr>
+<tr>
+<td><code>allocation</code></td>
+<td>object</td>
+<td>New allocation by asset class.</td>
+</tr>
+<tr>
+<td><code>previousAllocation</code></td>
+<td>object</td>
+<td>Allocation before rebalance.</td>
+</tr>
+<tr>
+<td><code>currentValue</code></td>
+<td>number</td>
+<td>Portfolio value after rebalance.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Emitted by:</strong> Backend portfolio or rebalancing service when rebalance is applied and persisted.</p>
+<p><strong>AI workflow triggered:</strong> <strong>Generate portfolio / rebalance insight</strong> → call AI Gateway <code>POST /ai/generate-insight</code> with context including old vs new allocation → store or send insight (e.g. attach to portfolio, push notification).</p>
+<hr />
+<h3 id="25-documentuploaded">2.5 DocumentUploaded</h3>
+<p><strong>Description:</strong> Emitted when a user has uploaded a financial document (CAS, bank statement, insurance, tax document) and it is stored and ready for processing. Used to run document extraction asynchronously so that structured data is available without the user waiting.</p>
+<p><strong>Entity type:</strong> <code>document</code></p>
+<p><strong>Typical payload fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>documentId</code></td>
+<td>string</td>
+<td>Platform document id.</td>
+</tr>
+<tr>
+<td><code>userId</code></td>
+<td>string</td>
+<td>Uploader.</td>
+</tr>
+<tr>
+<td><code>documentType</code></td>
+<td>string</td>
+<td>e.g. <code>CAS</code>, <code>BANK_STATEMENT</code>, <code>INSURANCE</code>, <code>TAX</code>.</td>
+</tr>
+<tr>
+<td><code>storageKey</code></td>
+<td>string</td>
+<td>Reference for gateway to fetch document (e.g. S3 key, URL).</td>
+</tr>
+<tr>
+<td><code>mimeType</code></td>
+<td>string | null</td>
+<td>Optional (e.g. application/pdf).</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Emitted by:</strong> Backend <strong>DocumentUploadService</strong> (or controller) after the file is successfully stored (e.g. S3 or local) and the document record (e.g. CustomerDocument) is persisted. Emit only for document types that support AI extraction.</p>
+<p><strong>AI workflow triggered:</strong> <strong>Run document extraction</strong> → call AI Gateway <code>POST /ai/extract-document</code> with <code>documentId</code>, <code>documentType</code>, <code>storageKey</code> → on success, store extracted entities in platform storage (e.g. MongoDB collection or MySQL table) or call backend “ingest extraction result” API; optionally trigger downstream workflows (e.g. update profile, portfolio).</p>
+<hr />
+<h3 id="26-navupdated">2.6 NAVUpdated</h3>
+<p><strong>Description:</strong> Emitted when NAV or fund metrics have been updated (e.g. after daily NAV ingestion and metrics run). Used for batch or downstream workflows that depend on fresh NAV (e.g. portfolio valuation refresh, performance insight). Less commonly used for direct AI calls; more for “data ready” signaling.</p>
+<p><strong>Entity type:</strong> <code>nav</code> (or <code>fund</code>)</p>
+<p><strong>Typical payload fields:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>runId</code></td>
+<td>string</td>
+<td>Ingestion or metrics run identifier.</td>
+</tr>
+<tr>
+<td><code>asOfDate</code></td>
+<td>string (date)</td>
+<td>NAV date.</td>
+</tr>
+<tr>
+<td><code>fundsUpdated</code></td>
+<td>number | null</td>
+<td>Count of funds updated (optional).</td>
+</tr>
+<tr>
+<td><code>metricsCompleted</code></td>
+<td>boolean</td>
+<td>Whether fund risk scores / metrics were recomputed.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Emitted by:</strong> Backend after <strong>NavDailyRunScheduler</strong> (or equivalent) completes the NAV pipeline: ingestion → migration → metrics → normalization. May be emitted once per run rather than per fund.</p>
+<p><strong>AI workflow triggered:</strong> Optional <strong>batch portfolio insight</strong> or <strong>performance insight</strong> for active users whose portfolio uses updated funds; or no direct AI call—event can be used to trigger “portfolio valuation refreshed” notifications with optional AI-generated summary. Alternatively, Trigger Engine may run a scheduled job that uses “NAV updated” as a precondition (e.g. “after NAV run, run DailyPortfolioInsightJob”).</p>
+<hr />
+<h2 id="3-trigger-engine-behavior">3. Trigger Engine Behavior</h2>
+<h3 id="31-consuming-events">3.1 Consuming Events</h3>
+<ul>
+<li><strong>Subscription:</strong> The Trigger Engine subscribes to the same destination as the backend publisher (queue, topic, or webhook). It runs as a separate process or container; it is not part of the Quarkus JVM.</li>
+<li><strong>Receive:</strong> For each message, the engine deserializes the body to a <strong>TriggerEvent</strong> (JSON). It validates required fields (<code>eventType</code>, <code>entityType</code>, <code>entityId</code>, <code>timestamp</code>, <code>payload</code>). Invalid events are logged and acknowledged (or dead-lettered) to avoid blocking the queue.</li>
+<li><strong>Deduplication:</strong> Before processing, the engine checks a deduplication store (e.g. cache or DB) with key <code>eventType:entityType:entityId</code> (and optionally a time window, e.g. 5 minutes). If the event was already processed, the message is acknowledged and skipped.</li>
+<li><strong>Routing:</strong> The engine uses <code>eventType</code> (and optionally <code>entityType</code>) to select the <strong>workflow</strong> to run (see section 4). Configuration (e.g. map of <code>eventType</code> → workflow id) can be file-based or from a config service.</li>
+</ul>
+<h3 id="32-deciding-which-ai-workflow-to-run">3.2 Deciding Which AI Workflow to Run</h3>
+<ul>
+<li><strong>Mapping table:</strong> The Trigger Engine maintains a mapping from <code>eventType</code> (and optionally payload conditions) to one or more <strong>workflow steps</strong>. Example:</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>eventType</th>
+<th>Workflow</th>
+<th>AI Gateway endpoint</th>
+<th>Post-step</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RiskScoreComputed</td>
+<td>generate_risk_explanation</td>
+<td>POST /ai/explain-risk-score</td>
+<td>store_explanation_cache</td>
+</tr>
+<tr>
+<td>AllocationGenerated</td>
+<td>generate_allocation_explanation</td>
+<td>POST /ai/explain-allocation</td>
+<td>store_explanation_cache</td>
+</tr>
+<tr>
+<td>DocumentUploaded</td>
+<td>extract_document</td>
+<td>POST /ai/extract-document</td>
+<td>store_extraction_result</td>
+</tr>
+<tr>
+<td>PortfolioCreated</td>
+<td>generate_portfolio_insight</td>
+<td>POST /ai/generate-insight</td>
+<td>attach_insight_to_portfolio</td>
+</tr>
+<tr>
+<td>PortfolioRebalanced</td>
+<td>generate_rebalance_insight</td>
+<td>POST /ai/generate-insight</td>
+<td>attach_insight / notify</td>
+</tr>
+<tr>
+<td>NAVUpdated</td>
+<td>(optional) batch_insight_or_no_op</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Context building:</strong> For each workflow step, the engine builds an <strong>AIRequest</strong>:</li>
+<li><strong>contextObject</strong> is built from the event <code>payload</code> and, when needed, from additional data (e.g. backend read API or shared DB) to form FinancialProfile, Portfolio, or Recommendation.</li>
+<li><strong>requestId</strong> is generated (e.g. UUID) and optionally tied to <code>correlationId</code>.</li>
+<li><strong>userId</strong> comes from payload when present.</li>
+<li>
+<p><strong>timeout</strong> is set per workflow (e.g. 15s for explanation, 60s for extraction).</p>
+</li>
+<li>
+<p><strong>Conditional execution:</strong> Optional feature flags or payload conditions (e.g. only run extraction for <code>documentType</code> in <code>["CAS","BANK_STATEMENT"]</code>) can skip workflows without failing the event.</p>
+</li>
+</ul>
+<h3 id="33-calling-the-ai-gateway">3.3 Calling the AI Gateway</h3>
+<ul>
+<li><strong>HTTP client:</strong> The Trigger Engine calls the AI Gateway over HTTP (e.g. POST to the appropriate path). It uses the same <strong>AIRequest</strong> / <strong>AIResponse</strong> contract as the backend (see <code>AI_GATEWAY_API_CONTRACT.md</code>).</li>
+<li><strong>Authentication:</strong> Service-to-service auth (API key, JWT, or mTLS) as configured for the gateway.</li>
+<li><strong>Timeout:</strong> Each request sends a <code>timeout</code> in the body (or relies on gateway default). The HTTP client should enforce a slightly higher timeout (e.g. request timeout + 5s) to avoid hanging.</li>
+<li><strong>Response handling:</strong> On <code>status: "success"</code>, the engine proceeds to the <strong>post-step</strong> (e.g. store cache, persist extraction). On <code>status: "error"</code> or <code>"timeout"</code>, the engine applies failure handling (retry or dead-letter).</li>
+</ul>
+<h3 id="34-failures-and-retries">3.4 Failures and Retries</h3>
+<ul>
+<li><strong>Retry policy:</strong> Transient failures (network error, gateway 5xx, timeout) can be retried with exponential backoff (e.g. 3 retries: 1s, 2s, 4s). The event message is not acknowledged until the workflow completes or max retries are exceeded.</li>
+<li><strong>Dead-letter:</strong> After max retries, the event is moved to a dead-letter queue (DLQ) or marked as failed in a store. A separate process or alert can inspect DLQ for manual replay or investigation.</li>
+<li><strong>Partial success:</strong> If the AI call succeeds but the post-step (e.g. writing to cache or backend) fails, the engine may retry the post-step only (with the same AI result) or treat as failure and retry the whole workflow. Recommendation: retry post-step with idempotent writes.</li>
+<li><strong>Idempotency:</strong> Post-steps (e.g. “store explanation for userId”) should be idempotent so that duplicate events or retries do not corrupt data.</li>
+</ul>
+<hr />
+<h2 id="4-example-trigger-workflows">4. Example Trigger Workflows</h2>
+<h3 id="41-riskscorecomputed-generate-risk-explanation-store-explanation-cache">4.1 RiskScoreComputed → Generate Risk Explanation → Store Explanation Cache</h3>
+<ol>
+<li><strong>Event received:</strong> <code>eventType: RiskScoreComputed</code>, <code>entityType: user</code>, <code>entityId: usr_abc123</code>, <code>payload: { userId, riskScore, riskBand, components }</code>.</li>
+<li><strong>Deduplication:</strong> Key <code>RiskScoreComputed:user:usr_abc123</code> (within last 5 min). If seen, ack and skip.</li>
+<li><strong>Build AIRequest:</strong> <code>requestType: explain_risk_score</code>, <code>contextObject</code>: payload (riskScore, riskBand, components), <code>userId: usr_abc123</code>, <code>requestId: &lt;uuid&gt;</code>.</li>
+<li><strong>Call:</strong> <code>POST /ai/explain-risk-score</code> with body = AIRequest.</li>
+<li><strong>On success:</strong> Read <code>result.explanation</code> from AIResponse; store in explanation cache (e.g. Redis or DB) with key <code>risk_explanation:usr_abc123</code> and optional TTL. Optionally store <code>reasoningStructure</code> if present.</li>
+<li><strong>On failure:</strong> Retry up to 3 times; then DLQ.</li>
+<li><strong>Ack message</strong> after step 5 or after final failure.</li>
+</ol>
+<p><strong>Result:</strong> When the user later requests “Explain my risk,” the backend can read from cache and return immediately without calling the AI Gateway.</p>
+<hr />
+<h3 id="42-documentuploaded-run-extract-document-store-structured-data">4.2 DocumentUploaded → Run Extract Document → Store Structured Data</h3>
+<ol>
+<li><strong>Event received:</strong> <code>eventType: DocumentUploaded</code>, <code>entityType: document</code>, <code>entityId: doc_upload_456</code>, <code>payload: { documentId, userId, documentType, storageKey }</code>.</li>
+<li><strong>Deduplication:</strong> Key <code>DocumentUploaded:document:doc_upload_456</code>. If seen, ack and skip.</li>
+<li><strong>Build AIRequest:</strong> <code>requestType: extract_document</code>, <code>contextObject: { documentId, documentType, storageKey }</code>, <code>userId</code> from payload, <code>requestId: &lt;uuid&gt;</code>, <code>timeout: 60000</code>.</li>
+<li><strong>Call:</strong> <code>POST /ai/extract-document</code> with body = AIRequest.</li>
+<li><strong>On success:</strong> Read <code>result.entities</code> and <code>result.confidence</code> from AIResponse. Persist to platform storage:</li>
+<li>Option A: Trigger Engine writes to a dedicated MongoDB collection or MySQL table (e.g. <code>document_extractions</code>) with <code>documentId</code>, <code>userId</code>, <code>entities</code>, <code>confidence</code>, <code>timestamp</code>.</li>
+<li>Option B: Trigger Engine calls a backend API (e.g. <code>PUT /api/v1/documents/{documentId}/extraction</code>) with the result; backend persists.</li>
+<li><strong>On failure:</strong> Retry up to 3 times (extraction can be slow); then DLQ. Optionally mark document as <code>extraction_failed</code> in platform.</li>
+<li><strong>Ack message</strong> after step 5 or after final failure.</li>
+</ol>
+<p><strong>Result:</strong> Structured data is available for profile enrichment, portfolio sync, or display without the user waiting on the upload screen.</p>
+<hr />
+<h3 id="43-portfoliocreated-generate-portfolio-insight-attach-insight-to-portfolio-record">4.3 PortfolioCreated → Generate Portfolio Insight → Attach Insight to Portfolio Record</h3>
+<ol>
+<li><strong>Event received:</strong> <code>eventType: PortfolioCreated</code>, <code>entityType: portfolio</code>, <code>entityId: port_xyz789</code>, <code>payload: { portfolioId, userId, holdings, currentValue }</code>.</li>
+<li><strong>Deduplication:</strong> Key <code>PortfolioCreated:portfolio:port_xyz789</code>. If seen, ack and skip.</li>
+<li><strong>Context:</strong> If payload is insufficient for a rich insight, Trigger Engine may call a backend read API to get FinancialProfile and full Portfolio (or use payload only).</li>
+<li><strong>Build AIRequest:</strong> <code>requestType: generate_financial_insight</code>, <code>contextObject: { financialProfile, portfolio }</code>, <code>userId</code> from payload, <code>requestId: &lt;uuid&gt;</code>.</li>
+<li><strong>Call:</strong> <code>POST /ai/generate-insight</code> with body = AIRequest.</li>
+<li><strong>On success:</strong> Read <code>result.insight</code> (and optional <code>result.sections</code>). Attach to portfolio:</li>
+<li>Option A: Trigger Engine writes to DB (e.g. <code>portfolio_insights</code> table with <code>portfolioId</code>, <code>insight</code>, <code>generatedAt</code>).</li>
+<li>Option B: Trigger Engine calls backend <code>PUT /api/v1/portfolio/{portfolioId}/insight</code> with the text; backend persists.</li>
+<li>Optionally: send a one-time notification (e.g. “Your portfolio is set up; here’s a quick insight”) via backend notification API with the same text.</li>
+<li><strong>On failure:</strong> Retry up to 3 times; then DLQ.</li>
+<li><strong>Ack message</strong> after step 6 or after final failure.</li>
+</ol>
+<p><strong>Result:</strong> New portfolio gets an initial narrative insight stored and optionally pushed to the user.</p>
+<hr />
+<h3 id="44-allocationgenerated-generate-allocation-explanation-store-explanation-cache">4.4 AllocationGenerated → Generate Allocation Explanation → Store Explanation Cache</h3>
+<ol>
+<li><strong>Event received:</strong> <code>eventType: AllocationGenerated</code>, <code>entityType: recommendation</code>, <code>entityId: rec_001</code>, <code>payload: { userId, recommendationId, allocation, recommendedFunds, riskBand }</code>.</li>
+<li><strong>Deduplication:</strong> Key <code>AllocationGenerated:recommendation:rec_001</code>. If seen, ack and skip.</li>
+<li><strong>Build AIRequest:</strong> <code>requestType: explain_allocation</code>, <code>contextObject: { financialProfile: { userId, riskScore, riskBand } (from payload or fetch), recommendation: payload }</code>, <code>userId</code>, <code>requestId: &lt;uuid&gt;</code>.</li>
+<li><strong>Call:</strong> <code>POST /ai/explain-allocation</code> with body = AIRequest.</li>
+<li><strong>On success:</strong> Read <code>result.explanation</code>; store in cache with key <code>allocation_explanation:rec_001</code> or <code>allocation_explanation:userId:recommendationId</code>.</li>
+<li><strong>Optional second call:</strong> Same event can trigger <code>POST /ai/recommendation-reasoning</code> and cache <code>result.reasoning</code> under <code>recommendation_reasoning:rec_001</code>.</li>
+<li><strong>On failure:</strong> Retry; then DLQ. Ack after success or final failure.</li>
+</ol>
+<p><strong>Result:</strong> When the user opens the recommendation screen, the backend can return pre-generated explanation and reasoning from cache.</p>
+<hr />
+<h2 id="5-scheduling-triggers">5. Scheduling Triggers</h2>
+<p>The Trigger Engine can run <strong>scheduled jobs</strong> that are not driven by a single event but by a cron or fixed interval. These jobs typically iterate over a set of entities (users, portfolios) and call the AI Gateway for each, then store or send results.</p>
+<h3 id="51-dailyportfolioinsightjob">5.1 DailyPortfolioInsightJob</h3>
+<p><strong>Description:</strong> Runs once per day (e.g. after NAV and metrics are updated). For each active user with a portfolio, generates a short narrative insight (e.g. diversification, performance, or risk) and stores it or sends it via notification.</p>
+<p><strong>Schedule:</strong> Cron, e.g. <code>0 8 * * *</code> (08:00 daily) or after NAV run (e.g. 23:30).</p>
+<p><strong>Behavior:</strong></p>
+<ol>
+<li><strong>Input:</strong> Trigger Engine queries or calls backend for “users with portfolio updated in last 24h” or “active users with non-empty portfolio.” Alternatively, Trigger Engine reads from a shared DB view or API (e.g. <code>GET /api/v1/internal/users-with-portfolio</code>).</li>
+<li><strong>For each user (with rate limiting):</strong></li>
+<li>Build FinancialProfile + Portfolio (from backend API or from event/store).</li>
+<li>Build AIRequest: <code>requestType: generate_financial_insight</code>, <code>contextObject: { financialProfile, portfolio }</code>, <code>userId</code>.</li>
+<li>Call <code>POST /ai/generate-insight</code>.</li>
+<li>On success: store insight (e.g. <code>daily_insight:userId:date</code>) or call backend to enqueue notification (e.g. “Daily portfolio insight” with the text). Backend uses existing <strong>UserNotificationService</strong> / SmsService / Mailer / WhatsApp to send.</li>
+<li><strong>Failures:</strong> Log per-user failures; do not block the rest. Optionally push failed user ids to a retry list for next run or DLQ.</li>
+</ol>
+<p><strong>Result:</strong> Users receive a daily digest or in-app insight without requesting it.</p>
+<hr />
+<h3 id="52-weeklyriskmonitoringjob">5.2 WeeklyRiskMonitoringJob</h3>
+<p><strong>Description:</strong> Runs once per week. For users whose risk score or questionnaire is older than a threshold, or who have not been contacted recently, generates a short risk insight or reminder (e.g. “Your risk profile supports a balanced allocation; consider reviewing your portfolio”).</p>
+<p><strong>Schedule:</strong> Cron, e.g. <code>0 9 * * 1</code> (Monday 09:00).</p>
+<p><strong>Behavior:</strong></p>
+<ol>
+<li><strong>Input:</strong> Trigger Engine calls backend API (e.g. <code>GET /api/v1/internal/users-risk-review-due</code>) that returns users with: risk score older than 6 months, or questionnaire not updated in 12 months, or similar criteria.</li>
+<li><strong>For each user:</strong></li>
+<li>Build FinancialProfile (from backend or payload).</li>
+<li>Build AIRequest: <code>requestType: generate_financial_insight</code>, <code>contextObject: { financialProfile }</code>, optional <code>insightType: "risk"</code>.</li>
+<li>Call <code>POST /ai/generate-insight</code>.</li>
+<li>On success: store or send via backend notification (“Time to review your risk profile?” with the insight text).</li>
+<li><strong>Failures:</strong> Log and continue; optional retry list.</li>
+</ol>
+<p><strong>Result:</strong> Proactive risk-review prompts with AI-generated, personalized copy.</p>
+<hr />
+<h3 id="53-how-the-trigger-engine-executes-scheduled-workflows">5.3 How the Trigger Engine Executes Scheduled Workflows</h3>
+<ul>
+<li><strong>Scheduler:</strong> The Trigger Engine process includes a scheduler (e.g. cron, Quartz, or cloud-native scheduler like AWS EventBridge + Lambda, or K8s CronJob) that triggers jobs at defined times.</li>
+<li><strong>Job entrypoint:</strong> Each job is a named routine (e.g. <code>DailyPortfolioInsightJob</code>, <code>WeeklyRiskMonitoringJob</code>) that:</li>
+<li>Fetches the list of entities to process (users, portfolios) from backend API or shared DB.</li>
+<li>Optionally checks feature flags or config (e.g. “insight job enabled”) and exits if disabled.</li>
+<li>Iterates over the list; for each entity, builds AIRequest, calls AI Gateway, and performs the post-step (store, notify). Applies rate limiting and optional concurrency limits to avoid overloading the gateway.</li>
+<li>Logs summary (success count, failure count, duration).</li>
+<li><strong>No event required:</strong> Scheduled jobs do not consume TriggerEvents; they are time-based. They may, however, use the same AI Gateway and same storage/notification patterns as event-driven workflows.</li>
+<li><strong>Idempotency:</strong> For “daily insight” and “weekly risk,” storing by <code>userId</code> + date or <code>userId</code> + week ensures one insight per user per period; re-runs do not duplicate user-facing content if the store is keyed correctly.</li>
+</ul>
+<hr />
+<h2 id="summary">Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Event Type</th>
+<th>Entity</th>
+<th>Emitter</th>
+<th>AI Workflow</th>
+<th>Post-step</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RiskScoreComputed</td>
+<td>user</td>
+<td>UserRiskOrchestrationService (backend)</td>
+<td>explain-risk-score</td>
+<td>store explanation cache</td>
+</tr>
+<tr>
+<td>AllocationGenerated</td>
+<td>recommendation</td>
+<td>AssetAllocationService / recommendation service</td>
+<td>explain-allocation, recommendation-reasoning</td>
+<td>store explanation cache</td>
+</tr>
+<tr>
+<td>PortfolioCreated</td>
+<td>portfolio</td>
+<td>Portfolio service</td>
+<td>generate-insight</td>
+<td>attach insight to portfolio / notify</td>
+</tr>
+<tr>
+<td>PortfolioRebalanced</td>
+<td>portfolio</td>
+<td>Portfolio / rebalance service</td>
+<td>generate-insight</td>
+<td>attach insight / notify</td>
+</tr>
+<tr>
+<td>DocumentUploaded</td>
+<td>document</td>
+<td>DocumentUploadService</td>
+<td>extract-document</td>
+<td>store extraction result</td>
+</tr>
+<tr>
+<td>NAVUpdated</td>
+<td>nav</td>
+<td>Nav pipeline / scheduler</td>
+<td>optional batch insight or no-op</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Scheduled Job</th>
+<th>Schedule</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DailyPortfolioInsightJob</td>
+<td>Daily (e.g. 08:00)</td>
+<td>Generate and store/send portfolio insight for active users.</td>
+</tr>
+<tr>
+<td>WeeklyRiskMonitoringJob</td>
+<td>Weekly (e.g. Monday 09:00)</td>
+<td>Generate and send risk-review insight for users due for review.</td>
+</tr>
+</tbody>
+</table>
+<p>The Trigger Engine consumes events from the platform, deduplicates, maps event type to workflow, calls the AI Gateway with an AIRequest, and performs post-steps (cache, persist, notify). Failures are retried with backoff; after max retries, events are dead-lettered. Scheduled jobs run independently and use the same gateway and storage patterns.</p>
+<hr />
+<p><em>This document defines the event-driven AI automation layer only. No implementation files are modified.</em></p>
