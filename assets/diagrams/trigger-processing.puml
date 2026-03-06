@@ -1,0 +1,16 @@
+@startuml trigger-processing
+title Trigger Processing Architecture
+participant "Event Sources" as Events
+participant "Trigger Detection\nLayer" as Detection
+participant "Deduplication\nLayer" as Dedup
+participant "AI Workflow\nDispatcher" as Dispatcher
+participant "AI Processing\nModules" as AI
+
+Events -> Detection : Platform events
+Detection -> Detection : Evaluate trigger conditions
+Detection -> Dedup : Trigger event
+Dedup -> Dedup : Validate / deduplicate
+Dedup -> Dispatcher : Validated trigger
+Dispatcher -> AI : Route to workflow
+AI -> AI : Execute AI workflow
+@enduml

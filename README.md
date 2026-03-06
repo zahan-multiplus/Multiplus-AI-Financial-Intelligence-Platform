@@ -1,17 +1,18 @@
 # Multiplus AI Architecture Documentation
 
-Static documentation site for the **Multiplus AI Financial Intelligence Platform** architecture.
+Single-page documentation viewer for the **Multiplus AI Financial Intelligence Platform** architecture.
 
 ## Opening the site
 
-- **Local:** Open `index.html` in a browser, or serve the folder with any static server (e.g. `python -m http.server 8000`).
-- **GitHub:** Push this folder to a repo and enable GitHub Pages (or open `index.html` directly from the repo).
+- **Local:** Serve the folder with a static server (e.g. `python -m http.server 8000`), then open **http://localhost:8000/**.
+- **Direct file:** Opening `index.html` in a browser may work for navigation, but content is loaded via fetch; for full functionality use a local server.
 
 ## Structure
 
-- `index.html` — Landing page and entry point
-- `pages/` — One HTML file per major section (Preface, Problem Context, System Overview, etc.)
-- `assets/css/style.css` — Layout and design (color scheme, three-column layout)
-- `assets/js/` — Navigation, table-of-contents, and search (vanilla JS)
+- `index.html` — Documentation viewer (single entry point)
+- `tree.js` — Navigation tree and content loading
+- `data/document_tree.json` — Documentation tree (sections and hierarchy)
+- `content/` — One HTML file per major section (preface, problem-context, system-overview, diagrams, etc.)
+- `diagrams/` — Architecture and flow diagrams (SVG)
 
-No build step or framework is required. The site is plain HTML, CSS, and JavaScript.
+The viewer loads section content from `content/*.html` when you navigate. No build step is required for viewing. To regenerate the tree from source, run `python generate_doc_tree_json.py` (requires `multiplus_document_tree.md` and `Multiplus_Ai.txt`).

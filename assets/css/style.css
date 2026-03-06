@@ -35,14 +35,14 @@ body {
   min-height: 100vh;
 }
 
-/* ========== Layout: Three-Column ========== */
+/* ========== Layout: Two-Column (sidebar + main). No right/TOC panel. ========== */
 .layout {
   display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr var(--toc-width);
+  grid-template-columns: var(--sidebar-width) 1fr;
   grid-template-rows: var(--header-height) 1fr;
   grid-template-areas:
-    "header header header"
-    "sidebar main toc";
+    "header header"
+    "sidebar main";
   min-height: 100vh;
 }
 
@@ -222,6 +222,24 @@ body {
   color: var(--text-secondary);
 }
 
+/* Architecture diagram figures (SVG) */
+.main-content figure.diagram-figure {
+  margin: var(--spacing-section) 0;
+  padding: 0;
+}
+.main-content figure.diagram-figure img {
+  display: block;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+}
+.main-content figure.diagram-figure figcaption {
+  margin-top: 12px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
 /* Mermaid diagram containers */
 .mermaid-wrap {
   margin: var(--spacing-paragraph) 0;
@@ -238,8 +256,9 @@ body {
   background: transparent;
 }
 
-/* ========== Table of Contents Panel ========== */
+/* ========== Table of Contents Panel (unused — two-column layout; keep hidden for any legacy markup) ========== */
 .toc-panel {
+  display: none !important;
   grid-area: toc;
   background: var(--bg-sidebar);
   border-left: 1px solid var(--border);
@@ -275,7 +294,7 @@ body {
 .toc-empty { font-size: 0.875rem; color: var(--text-secondary); padding: 8px; display: block; }
 
 /* ========== Index / Landing Page ========== */
-.index-page .layout { grid-template-areas: "header header header" "main main main"; grid-template-columns: 1fr; }
+.index-page .layout { grid-template-areas: "header header" "main main"; grid-template-columns: 1fr; }
 .index-page .sidebar { display: none; }
 .index-page .toc-panel { display: none; }
 .index-hero {

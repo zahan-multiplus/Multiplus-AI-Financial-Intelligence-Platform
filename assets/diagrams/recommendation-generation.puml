@@ -1,0 +1,30 @@
+@startuml recommendation-generation
+title Recommendation Generation Flow
+actor User
+participant "Platform\nBackend" as Backend
+participant "Financial Profile\nService" as Profile
+participant "Portfolio Analysis\nEngine" as Portfolio
+participant "Risk Profiling" as Risk
+participant "Asset Allocation\nModels" as Allocation
+participant "Fund Ranking" as Ranking
+participant "Recommendation\nEngine" as RecEng
+participant "Suitability\nValidation" as Suitability
+
+User -> Backend : Recommendation request
+Backend -> Profile : Get user financial profile
+Profile --> Backend : Financial profile
+Backend -> Portfolio : Analyze portfolio
+Portfolio --> Backend : Portfolio analysis
+Backend -> Risk : Get risk profile
+Risk --> Backend : Risk profile
+Backend -> Allocation : Determine target allocation
+Allocation --> Backend : Allocation targets
+Backend -> Ranking : Get ranked products
+Ranking --> Backend : Ranked products
+Backend -> RecEng : Generate recommendations
+RecEng -> RecEng : Filter, select, distribute
+RecEng -> Suitability : Validate recommendations
+Suitability --> RecEng : Approved / adjusted
+RecEng --> Backend : Recommendation output
+Backend --> User : Recommendations
+@enduml

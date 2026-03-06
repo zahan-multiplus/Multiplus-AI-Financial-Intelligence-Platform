@@ -1,0 +1,17 @@
+@startuml user-interaction-flow
+title User Interaction Flow
+actor User
+participant "User Interface\n(Web or Mobile)" as UI
+participant "API Gateway" as Gateway
+participant "Backend Platform\nServices" as Backend
+participant "AI Intelligence\nPlatform" as AI
+
+User -> UI : User action
+UI -> Gateway : Request
+Gateway -> Backend : Routed request
+Backend -> AI : Analytical request
+AI --> Backend : Recommendation or insight
+Backend --> Gateway : Response
+Gateway --> UI : Response
+UI --> User : Display result
+@enduml

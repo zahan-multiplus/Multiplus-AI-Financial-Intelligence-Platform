@@ -1,0 +1,19 @@
+@startuml data-ingestion-pipeline
+title Data Ingestion Pipeline
+participant "Banking APIs" as Banking
+participant "Investment\nPlatforms" as Invest
+participant "Financial\nDocuments" as Docs
+participant "Market Data\nProviders" as Market
+participant "Data Integration\nLayer" as Integration
+participant "Data Extraction\nPipelines" as Extraction
+participant "Data Enrichment\nPipelines" as Enrichment
+participant "Financial Data\nInfrastructure" as Infra
+
+Banking -> Integration : Banking data
+Invest -> Integration : Portfolio data
+Docs -> Integration : Document-derived data
+Market -> Integration : Benchmark & product data
+Integration -> Extraction : Raw datasets
+Extraction -> Enrichment : Extracted data
+Enrichment -> Infra : Standardized financial datasets
+@enduml

@@ -1,0 +1,19 @@
+@startuml ai-intelligence-processing
+title AI Intelligence Processing Pipeline
+participant "Structured\nFinancial Data" as Data
+participant "Financial Data\nInterpretation" as Interp
+participant "User Financial\nProfile Construction" as Profile
+participant "Portfolio\nIntelligence" as Portfolio
+participant "Risk\nProfiling" as Risk
+participant "Product\nEvaluation" as Product
+participant "Recommendation\nEngine" as RecEng
+participant "Financial\nInsights" as Insights
+
+Data -> Interp : Financial datasets
+Interp -> Profile : Interpreted data
+Profile -> Portfolio : User profile
+Portfolio -> Risk : Portfolio analysis
+Risk -> Product : Risk profile
+Product -> RecEng : Ranked products
+RecEng -> Insights : Recommendations
+@enduml

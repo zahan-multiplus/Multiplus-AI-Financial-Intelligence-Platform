@@ -2934,7 +2934,97 @@ This architectural approach allows the system to support both current financial 
 
 The next section describes the core system layers in greater detail and explains how each layer contributes to the operation of the Multiplus AI Financial Intelligence Platform.
 
+4.1.10 Repository and Implementation Context
 
+The architecture described in this document is realized in a single repository containing one backend service, one or more frontend applications, shared database schema and migrations, and deployment and CI/CD automation. This subsection aligns the conceptual layers with the current implementation so that engineers can map specifications to code.
+
+The current codebase layout includes:
+
+a single backend service (Quarkus, Java 17) implementing platform APIs, AI-facing orchestration, and integrations
+
+one or more frontend applications (Next.js, React, TypeScript) for web user interfaces
+
+shared database schema and migrations (MySQL as system of record; MongoDB for NAV raw data and credit report storage)
+
+deployment scripts and CI/CD workflows for build and deploy to target environments
+
+External financial and operational integrations present in the repository are implemented as concrete clients or optional modules. Examples include mutual fund NAV data (MF API), credit report and KYC services (Kyckart), CRM synchronization (ERPNext), document storage (S3), messaging (WhatsApp, SMS with multiple provider implementations), and similar systems. These integrations are not final. The architecture treats all external financial and operational providers as interchangeable. Implementations should evolve toward a provider adapter pattern so that providers can be swapped or added without changing core platform logic. The AI specification describes the target architecture; the repository represents the current implementation state, which may include direct clients until adapters are introduced.
+
+4.1.11 Multiplus AI Integration Architecture and Phased Evolution
+
+The following subsection describes the actual architecture decisions for integrating AI into the Multiplus platform. The core platform remains a Quarkus modular monolith; AI capabilities are integrated incrementally rather than as a separate, full-scale AI microservice from the outset.
+
+Real System Architecture
+
+The integration of AI with the Multiplus platform follows this flow:
+
+Frontend
+        ↓
+Quarkus Backend
+        ↓
+AI Modules
+        ↓
+Model Serving Layer
+        ↓
+Self-hosted AI Models
+
+The frontend (web applications) communicates with the Quarkus backend via REST APIs. The backend acts as the orchestration layer for all platform and AI workflows. AI capabilities are implemented as modules within the existing backend process. These AI modules call a model serving layer through internal APIs. The model serving layer (e.g. vLLM or Ollama) runs on self-hosted GPU infrastructure and executes open-source AI models. No external AI APIs (OpenAI, Anthropic, Google, or similar) are used; all inference runs within the Multiplus infrastructure.
+
+AI Modules Within the Backend
+
+The backend AI module is responsible for:
+
+risk explanation generation (natural language explanation of an already calculated risk score)
+
+portfolio recommendation explanations (natural language explanation for allocation and fund selection)
+
+document intelligence pipelines (e.g. OCR, extraction of structured financial data from documents)
+
+future financial insights (extensible for additional AI-driven outputs)
+
+The AI module invokes the model server through internal APIs only. The model runtime is deployed separately from the backend application but within the same infrastructure environment (e.g. same VPC or data center). This keeps sensitive financial data and inference on controlled infrastructure while allowing the backend to remain the single orchestration point for business logic and AI calls.
+
+Model Infrastructure
+
+Models used by the platform are:
+
+open-source
+
+downloaded and stored locally on Multiplus infrastructure
+
+served from internal GPU servers via a model serving layer (e.g. vLLM or Ollama)
+
+The model serving layer provides an HTTP or gRPC API that the backend AI module calls. Model weights are not shipped with the application; they are loaded and run by the model server. This separation allows GPU resources to be scaled or updated independently of the application server.
+
+Phased AI Evolution
+
+The AI platform will evolve incrementally rather than introducing a full AI stack at once.
+
+Phase 1 — Initial AI Integration
+
+LLM explanations for risk scores and portfolio recommendations
+
+document OCR for scanned or image-based financial documents
+
+basic AI pipelines (e.g. trigger OCR on upload, call LLM with context for explanation generation)
+
+Phase 2 — Retrieval and Enrichment
+
+embedding generation for financial text and documents
+
+vector database for storing embeddings
+
+RAG (retrieval-augmented generation) for grounding LLM responses in platform data
+
+Phase 3 — Advanced Capabilities
+
+advanced AI capabilities (e.g. richer financial reasoning, multi-step analysis)
+
+financial intelligence models (e.g. classification, ranking) where appropriate
+
+optional conversational or agent-style interface
+
+This phased approach allows the platform to deliver immediate value (explanations, OCR) while building toward a fuller AI capability set without requiring a full-scale AI platform deployment in the first release.
 
 4.2 Core System Layers
 
@@ -3000,7 +3090,7 @@ The user interface does not directly interact with AI models or raw financial da
 
 The Platform Layer functions as the operational backbone of the Multiplus system. It coordinates system workflows, manages application logic, and exposes service interfaces that connect user applications with the intelligence and data infrastructure layers.
 
-This layer typically consists of backend services implemented as modular microservices or service components.
+This layer typically consists of backend services implemented as a modular monolith (e.g. Quarkus) or modular service components.
 
 Core responsibilities of the platform layer include:
 
@@ -3278,6 +3368,8 @@ Platform Backend Services
 User Applications
 
 This separation ensures that analytical processes remain isolated from operational platform services while still providing intelligence capabilities to the system.
+
+In the implemented integration architecture (see Section 4.1.11), the AI platform is realized as AI modules within the Quarkus backend. These modules orchestrate AI workflows and call a model serving layer (e.g. vLLM or Ollama) on self-hosted GPU infrastructure. All AI models are open-source and run locally; no external AI APIs are used.
 
 5.1.3 Core Functional Modules
 
@@ -5814,6 +5906,8 @@ market benchmark data
 regulatory and reference datasets
 
 These external datasets complement internally generated financial intelligence and provide the foundational inputs required for financial analytics.
+
+External financial providers are not fixed; the platform architecture treats them as interchangeable. Integrations with banks, investment platforms, market data providers, and similar systems should be implemented through a provider adapter layer so that providers can be swapped or added without changing core platform or AI logic.
 
 6.3.1 Categories of External Financial Data Providers
 

@@ -1,0 +1,17 @@
+@startuml end-to-end-system-flow
+title End-to-End System Flow
+participant "External Financial\nData Sources" as Ext
+participant "Data Ingestion\nPipelines" as Ingest
+participant "Financial Data\nStorage & Processing" as Storage
+participant "AI Financial\nIntelligence Platform" as AI
+participant "Recommendation &\nInsight Generation" as Rec
+participant "Platform Backend\nServices" as Backend
+participant "User\nApplications" as User
+
+Ext -> Ingest : Financial data
+Ingest -> Storage : Cleaned & normalized data
+Storage -> AI : Structured financial datasets
+AI -> Rec : Analytical outputs
+Rec -> Backend : Recommendations & insights
+Backend -> User : Financial insights
+@enduml

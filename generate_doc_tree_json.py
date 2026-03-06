@@ -11,7 +11,7 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 TREE_FILE = os.path.join(BASE, 'multiplus_document_tree.md')
 DOC_SOURCE = os.path.join(BASE, 'Multiplus_Ai.txt')
 DOC_TREE_JSON = os.path.join(BASE, 'document_tree.json')
-VIEWER_DATA = os.path.join(BASE, 'viewer', 'data')
+VIEWER_DATA = os.path.join(BASE, 'data')
 
 PART_PAGES = {
     1: 'preface.html',

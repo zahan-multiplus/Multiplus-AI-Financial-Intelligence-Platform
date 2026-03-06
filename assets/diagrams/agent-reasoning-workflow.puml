@@ -1,0 +1,24 @@
+@startuml agent-reasoning-workflow
+title Agent Reasoning Workflow
+actor User
+participant "Platform\nServices" as Platform
+participant "AI Agent" as Agent
+participant "Context\nBuilder" as Context
+participant "Financial Data\nServices" as DataSvc
+participant "Tool Invocation\nLayer" as Tools
+participant "LLM Model" as LLM
+
+User -> Platform : Query or request
+Platform -> Agent : Request
+Agent -> Context : Build context
+Context -> DataSvc : Retrieve financial data
+DataSvc --> Context : Profile, portfolio, metrics
+Context --> Agent : Structured context
+Agent -> Tools : Invoke analytical tools
+Tools --> Agent : Tool outputs
+Agent -> LLM : Prompt (context + task)
+LLM --> Agent : Generated text
+Agent -> Agent : Synthesize & structure
+Agent --> Platform : Structured insight
+Platform --> User : Response
+@enduml

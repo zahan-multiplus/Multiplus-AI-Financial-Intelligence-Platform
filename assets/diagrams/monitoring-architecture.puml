@@ -1,0 +1,14 @@
+@startuml monitoring-architecture
+title System Monitoring Architecture
+participant "Platform\nServices" as Services
+participant "AI Models &\nPipelines" as AI
+participant "Metrics &\nLog Collection" as Collect
+participant "Monitoring\nInfrastructure" as Monitor
+participant "Alerting &\nVisualization" as Alert
+
+Services -> Collect : Metrics and logs
+AI -> Collect : Model and pipeline metrics
+Collect -> Monitor : Aggregated metrics
+Monitor -> Monitor : Evaluate thresholds
+Monitor -> Alert : Alerts and dashboards
+@enduml

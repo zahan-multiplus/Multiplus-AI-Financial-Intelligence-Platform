@@ -719,80 +719,80 @@
         {
           "name": "AI Platform Flow",
           "id": "diagrams-ai-platform-flow",
-          "anchor": "diagrams-ai-platform-flow",
-          "page": "diagrams.html"
+          "anchor": "s-5-1-9-1",
+          "page": "ai-platform.html"
         },
         {
           "name": "AI Data Flow",
           "id": "diagrams-ai-data-flow",
-          "anchor": "diagrams-ai-data-flow",
-          "page": "diagrams.html"
+          "anchor": "s-5-1-9-2",
+          "page": "ai-platform.html"
         },
         {
           "name": "Risk Explanation Flow",
           "id": "diagrams-risk-explanation",
-          "anchor": "diagrams-risk-explanation",
-          "page": "diagrams.html"
+          "anchor": "s-4-1-10",
+          "page": "system-architecture.html"
         },
         {
           "name": "Portfolio Recommendation Flow",
           "id": "diagrams-portfolio-recommendation",
-          "anchor": "diagrams-portfolio-recommendation",
-          "page": "diagrams.html"
+          "anchor": "s-10-9-11b",
+          "page": "recommendation-engine.html"
         },
         {
           "name": "Document OCR Flow",
           "id": "diagrams-document-ocr",
-          "anchor": "diagrams-document-ocr",
-          "page": "diagrams.html"
+          "anchor": "s-11-5-2b",
+          "page": "document-intelligence.html"
         },
         {
           "name": "End-to-End System Flow",
           "id": "diagrams-end-to-end-flow",
-          "anchor": "diagrams-end-to-end-flow",
-          "page": "diagrams.html"
+          "anchor": "s-4-1-3",
+          "page": "system-architecture.html"
         },
         {
           "name": "User Interaction Flow",
           "id": "diagrams-user-interaction",
-          "anchor": "diagrams-user-interaction",
-          "page": "diagrams.html"
+          "anchor": "s-4-1-4",
+          "page": "system-architecture.html"
         },
         {
           "name": "Data Ingestion Pipeline",
           "id": "diagrams-data-ingestion",
-          "anchor": "diagrams-data-ingestion",
-          "page": "diagrams.html"
+          "anchor": "s-6-1-8",
+          "page": "data-architecture.html"
         },
         {
           "name": "AI Intelligence Processing",
           "id": "diagrams-ai-intelligence-processing",
-          "anchor": "diagrams-ai-intelligence-processing",
-          "page": "diagrams.html"
+          "anchor": "s-4-1-6",
+          "page": "system-architecture.html"
         },
         {
           "name": "Agent Reasoning Workflow",
           "id": "diagrams-agent-reasoning",
-          "anchor": "diagrams-agent-reasoning",
-          "page": "diagrams.html"
+          "anchor": "s-9-1-5",
+          "page": "agent-architecture.html"
         },
         {
           "name": "Trigger Processing",
           "id": "diagrams-trigger-processing",
-          "anchor": "diagrams-trigger-processing",
-          "page": "diagrams.html"
+          "anchor": "s-13-1-4",
+          "page": "triggers.html"
         },
         {
           "name": "Recommendation Generation",
           "id": "diagrams-recommendation-generation",
-          "anchor": "diagrams-recommendation-generation",
-          "page": "diagrams.html"
+          "anchor": "s-10-9-3",
+          "page": "recommendation-engine.html"
         },
         {
           "name": "System Monitoring",
           "id": "diagrams-monitoring",
-          "anchor": "diagrams-monitoring",
-          "page": "diagrams.html"
+          "anchor": "s-14-1",
+          "page": "monitoring.html"
         }
       ]
     },

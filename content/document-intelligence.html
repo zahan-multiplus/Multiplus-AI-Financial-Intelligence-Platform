@@ -1,0 +1,1251 @@
+<h1 id="part">DOCUMENT INTELLIGENCE</h1>
+<h2 id="s-11-1">Financial Document Processing</h2>
+<p>Financial Document Processing is responsible for extracting structured financial information from unstructured or semi-structured financial documents. Many important financial data sources exist in document formats such as PDFs, scanned statements, or structured reports. These documents often contain valuable financial information that cannot be directly consumed by analytical systems.</p>
+<p>Within the Multiplus AI Financial Intelligence Platform, the Document Intelligence subsystem converts financial documents into machine-readable data that can be integrated into the platform’s financial data models. This process enables the system to incorporate external financial records into the user’s financial profile and portfolio analysis.</p>
+<p>This section describes the architecture, workflows, and components used to process financial documents.</p>
+<h3 id="s-11-1-1">Purpose of Financial Document Processing</h3>
+<p>The primary objective of financial document processing is to transform financial documents into structured data that can be used by the platform’s analytics systems.</p>
+<p>Key objectives include:</p>
+<ul>
+<li>extracting financial data from documents</li>
+<li>converting unstructured information into structured records</li>
+<li>enabling integration with user financial profiles</li>
+<li>supporting portfolio analysis and financial insights</li>
+</ul>
+<p>Document processing allows the platform to access financial data that is otherwise difficult to analyze programmatically.</p>
+<h3 id="s-11-1-2">Types of Financial Documents</h3>
+<p>The platform may process multiple types of financial documents.</p>
+<p>Common document types include:</p>
+<ul>
+<li>consolidated account statements (CAS)</li>
+<li>bank statements</li>
+<li>investment account reports</li>
+<li>financial transaction summaries</li>
+<li>Each document type may have a different structure and extraction requirements.</li>
+</ul>
+<h3 id="s-11-1-3">Document Processing Workflow</h3>
+<p>The document processing pipeline follows a structured workflow.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Document Upload
+        ↓
+Document Preprocessing
+        ↓
+Text Extraction
+        ↓
+Data Parsing
+        ↓
+Structured Data Generation</pre>
+<p>This workflow converts raw document files into structured datasets that can be used by the platform.</p>
+<h3 id="s-11-1-4">Document Ingestion</h3>
+<p>The first step in document processing is ingesting the document into the platform.</p>
+<p>Document ingestion may occur through:</p>
+<p>user-uploaded files</p>
+<p>integration with financial data providers</p>
+<p>document retrieval from external systems</p>
+<p>Example ingestion process:</p>
+<pre class="diagram-block">User Upload
+        ↓
+Document Storage
+        ↓
+Document Processing Pipeline</pre>
+<p>Once ingested, the document is stored in the platform’s document repository.</p>
+<h3 id="s-11-1-5">Document Preprocessing</h3>
+<p>Before text extraction begins, documents undergo preprocessing to improve extraction accuracy.</p>
+<p>Preprocessing operations may include:</p>
+<ul>
+<li>file format normalization</li>
+<li>removal of metadata elements</li>
+<li>page segmentation</li>
+<li>Example workflow:</li>
+<li>Raw Document</li>
+<li>↓</li>
+<li>Format Normalization</li>
+<li>↓</li>
+<li>Page Segmentation</li>
+<li>Preprocessing ensures that documents are suitable for text extraction.</li>
+</ul>
+<h3 id="s-11-1-6">Text Extraction</h3>
+<p>Text extraction converts document content into machine-readable text.</p>
+<p>Extraction techniques may include:</p>
+<ul>
+<li>PDF text extraction</li>
+<li>optical character recognition (OCR) for scanned documents</li>
+<li>layout-aware text extraction</li>
+<li>Example workflow:</li>
+<li>Document File</li>
+<li>↓</li>
+<li>Text Extraction Engine</li>
+<li>↓</li>
+<li>Raw Text Output</li>
+<li>The extracted text becomes the input for structured data parsing.</li>
+</ul>
+<h3 id="s-11-1-7">Document Structure Detection</h3>
+<p>Financial documents often follow structured layouts containing tables and labeled fields.</p>
+<p>Structure detection identifies elements such as:</p>
+<ul>
+<li>tables</li>
+<li>headers</li>
+<li>key financial fields</li>
+<li>Example workflow:</li>
+<li>Extracted Text</li>
+<li>↓</li>
+<li>Layout Analysis</li>
+<li>↓</li>
+<li>Structured Document Representation</li>
+<li>Structure detection improves the accuracy of data extraction.</li>
+</ul>
+<h3 id="s-11-1-8">Data Parsing</h3>
+<p>Once the document structure is identified, the system parses relevant financial information.</p>
+<p>Examples of extracted data include:</p>
+<ul>
+<li>transaction records</li>
+<li>account balances</li>
+<li>investment holdings</li>
+<li>Example structure:</li>
+<li>ParsedFinancialData</li>
+<li>account_id</li>
+<li>transaction_records</li>
+<li>investment_holdings</li>
+<li>Parsed data is then converted into platform-compatible formats.</li>
+</ul>
+<h3 id="s-11-1-9">Structured Data Generation</h3>
+<p>After parsing, the extracted data is converted into structured records aligned with the platform’s financial data models.</p>
+<p>Example structure:</p>
+<p>StructuredDocumentData user_id document_type extracted_records</p>
+<p>These records can then be integrated into the platform’s financial datasets.</p>
+<h3 id="s-11-1-10">Data Validation</h3>
+<p>Extracted data must be validated to ensure accuracy.</p>
+<p>Validation checks may include:</p>
+<ul>
+<li>verifying numerical consistency</li>
+<li>validating account identifiers</li>
+<li>detecting duplicate entries</li>
+<li>Example validation workflow:</li>
+<li>Extracted Data</li>
+<li>↓</li>
+<li>Validation Rules</li>
+<li>↓</li>
+<li>Validated Financial Records</li>
+<li>Only validated records are incorporated into financial analysis pipelines.</li>
+</ul>
+<h3 id="s-11-1-11">Integration with Financial Data Models</h3>
+<p>Once validated, the extracted data is integrated into the platform’s financial data infrastructure.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Validated Document Data
+        ↓
+Financial Data Models
+        ↓
+User Financial Profile Update</pre>
+<p>This integration allows the platform to incorporate document-derived insights into portfolio analysis and recommendation systems.</p>
+<h3 id="s-11-1-12">Document Storage and Retrieval</h3>
+<p>Processed documents and extracted data must be stored securely.</p>
+<p>The system maintains:</p>
+<p>original document files</p>
+<p>extracted text representations</p>
+<p>structured financial records</p>
+<p>Example storage architecture:</p>
+<pre class="diagram-block">Document Storage
+        ↓
+Processed Document Data
+        ↓
+Financial Data Infrastructure</pre>
+<p>Secure storage ensures that documents remain available for future analysis or auditing.</p>
+<h3 id="s-11-1-13">Importance in the Financial Intelligence Platform</h3>
+<p>Financial document processing expands the platform’s ability to understand user finances beyond structured API-based data sources.</p>
+<p>By extracting financial information from statements and reports, the system gains deeper visibility into user investments, transactions, and financial behavior. This additional data strengthens the accuracy of financial profiles, portfolio analysis, and recommendation systems.</p>
+<p>Document intelligence therefore plays a critical role in building a comprehensive financial understanding of the user within the Multiplus AI Financial Intelligence Platform.</p>
+<h2 id="s-11-2">CAS Document Parsing</h2>
+<p>CAS Document Parsing refers to the extraction of structured investment information from Consolidated Account Statements (CAS). A CAS is a standardized financial document that summarizes mutual fund investments held by an investor across different asset management companies. These statements are commonly issued by depositories or registrar and transfer agents and provide a consolidated view of investment holdings and transactions.</p>
+<p>Within the Multiplus AI Financial Intelligence Platform, CAS parsing enables the system to automatically detect and extract mutual fund investment data from uploaded CAS documents. The extracted data is then integrated into the user’s financial profile and portfolio analysis systems.</p>
+<p>This section describes the architecture and workflow used to parse CAS documents and convert them into structured investment records.</p>
+<h3 id="s-11-2-1">Purpose of CAS Parsing</h3>
+<p>The primary objective of CAS parsing is to extract investment information from consolidated account statements and convert it into structured portfolio data.</p>
+<p>Key objectives include:</p>
+<ul>
+<li>identifying mutual fund holdings</li>
+<li>extracting transaction histories</li>
+<li>reconstructing investment portfolios</li>
+<li>integrating investment data into financial profiles</li>
+</ul>
+<p>CAS parsing allows the platform to automatically understand a user's existing investments without requiring manual input.</p>
+<h3 id="s-11-2-2">CAS Document Characteristics</h3>
+<p>CAS documents typically contain structured information about mutual fund investments.</p>
+<p>Common information elements include:</p>
+<ul>
+<li>investor identification details</li>
+<li>mutual fund scheme names</li>
+<li>transaction history</li>
+<li>current investment balances</li>
+<li>unit holdings and NAV values</li>
+<li>These documents may be provided in PDF format with tabular data layouts.</li>
+</ul>
+<h3 id="s-11-2-3">CAS Parsing Workflow</h3>
+<p>The CAS parsing pipeline follows a structured workflow.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">CAS Document Upload
+        ↓
+Document Preprocessing
+        ↓
+Text Extraction
+        ↓
+Table Detection
+        ↓
+Investment Data Parsing
+        ↓
+Portfolio Dataset Generation</pre>
+<p>This workflow transforms the CAS document into structured portfolio records.</p>
+<h3 id="s-11-2-4">Investor Information Extraction</h3>
+<p>The first stage of parsing extracts investor identification details.</p>
+<p>Typical fields include:</p>
+<ul>
+<li>investor name</li>
+<li>account number</li>
+<li>statement period</li>
+<li>Example structure:</li>
+<li>InvestorInformation</li>
+<li>investor_name</li>
+<li>account_number</li>
+<li>statement_period</li>
+<li>This information links the document to the correct user profile.</li>
+</ul>
+<h3 id="s-11-2-5">Scheme Identification</h3>
+<p>CAS documents list investments by mutual fund schemes.</p>
+<p>The parser identifies:</p>
+<p>scheme name</p>
+<p>scheme category</p>
+<p>asset management company</p>
+<p>Example structure:</p>
+<p>InvestmentScheme scheme_name scheme_category asset_management_company</p>
+<p>This information allows the system to map schemes to products in the product universe database.</p>
+<h3 id="s-11-2-6">Transaction History Extraction</h3>
+<p>CAS statements contain detailed transaction records for each scheme.</p>
+<p>Typical transaction data includes:</p>
+<ul>
+<li>transaction date</li>
+<li>transaction type</li>
+<li>number of units purchased or redeemed</li>
+<li>transaction amount</li>
+<li>Example structure:</li>
+<li>TransactionRecord</li>
+<li>transaction_date</li>
+<li>transaction_type</li>
+<li>units</li>
+<li>transaction_amount</li>
+</ul>
+<p>Transaction histories are used to reconstruct investment behavior and portfolio changes.</p>
+<h3 id="s-11-2-7">Holdings Extraction</h3>
+<p>The parser also extracts current investment holdings.</p>
+<p>Typical fields include:</p>
+<ul>
+<li>total units held</li>
+<li>current NAV value</li>
+<li>market value of holdings</li>
+<li>Example structure:</li>
+<li>InvestmentHolding</li>
+<li>scheme_name</li>
+<li>units_held</li>
+<li>nav_value</li>
+<li>market_value</li>
+<li>These records represent the current state of the user's mutual fund investments.</li>
+</ul>
+<h3 id="s-11-2-8">Table Detection and Parsing</h3>
+<p>Most CAS documents contain investment information in tabular formats.</p>
+<p>Table detection algorithms identify and extract these tables.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Extracted Document Text
+        ↓
+Table Detection
+        ↓
+Row Parsing
+        ↓
+Structured Records</pre>
+<p>Table parsing ensures accurate extraction of structured financial data.</p>
+<h3 id="s-11-2-9">Scheme Mapping</h3>
+<p>Extracted scheme names must be mapped to internal product identifiers used by the platform.</p>
+<p>Example mapping process:</p>
+<pre class="diagram-block">Extracted Scheme Name
+        ↓
+Product Universe Lookup
+        ↓
+Internal Product ID</pre>
+<p>This mapping enables integration with fund ranking and recommendation systems.</p>
+<h3 id="s-11-2-10">Portfolio Reconstruction</h3>
+<p>After parsing transactions and holdings, the system reconstructs the user's mutual fund portfolio.</p>
+<p>Example workflow:</p>
+<p>Parsed Holdings +</p>
+<pre class="diagram-block">Transaction History
+        ↓
+Portfolio Reconstruction</pre>
+<p>The resulting portfolio dataset can be used for portfolio analysis.</p>
+<h3 id="s-11-2-11">Data Validation</h3>
+<p>CAS-derived data must undergo validation before being incorporated into the financial data infrastructure.</p>
+<p>Validation checks may include:</p>
+<ul>
+<li>verifying numerical consistency of transaction records</li>
+<li>validating scheme identifiers</li>
+<li>detecting duplicate transactions</li>
+<li>Example validation workflow:</li>
+<li>Parsed CAS Data</li>
+<li>↓</li>
+<li>Validation Rules</li>
+<li>↓</li>
+<li>Validated Portfolio Data</li>
+<li>Validation ensures the reliability of extracted financial information.</li>
+</ul>
+<h3 id="s-11-2-12">Integration with Portfolio Analysis</h3>
+<p>Once validated, CAS-derived data is integrated into the portfolio analysis system.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Validated CAS Data
+        ↓
+Portfolio Database
+        ↓
+Portfolio Analysis Engine</pre>
+<p>This integration allows the platform to analyze the user’s real investment portfolio.</p>
+<h3 id="s-11-2-13">Importance in the Financial Intelligence Platform</h3>
+<p>CAS document parsing enables the platform to automatically understand a user’s existing mutual fund investments. This capability eliminates the need for manual portfolio entry and significantly improves the completeness of the user’s financial profile.</p>
+<p>By extracting scheme-level holdings, transaction histories, and investment balances from CAS documents, the platform gains the ability to perform detailed portfolio analysis and generate more accurate investment recommendations.</p>
+<p>CAS parsing therefore plays a critical role in enabling data-driven financial intelligence within the Multiplus AI Financial Intelligence Platform.</p>
+<h2 id="s-11-3">Bank Statement Analysis</h2>
+<p>Bank Statement Analysis is responsible for extracting financial behavior insights from bank account statements. Bank statements contain detailed records of financial transactions including income deposits, expense payments, transfers, and recurring financial obligations. These records provide valuable information about the user's financial health, spending patterns, and liquidity position.</p>
+<p>Within the Multiplus AI Financial Intelligence Platform, bank statement analysis converts raw transaction records into structured financial signals that support user profiling, risk assessment, and recommendation generation.</p>
+<p>This section describes the architecture and processing workflow used to analyze bank statements.</p>
+<h3 id="s-11-3-1">Purpose of Bank Statement Analysis</h3>
+<p>The primary objective of bank statement analysis is to derive financial insights from bank transaction data.</p>
+<p>Key objectives include:</p>
+<ul>
+<li>identifying income sources</li>
+<li>detecting recurring expenses and financial obligations</li>
+<li>estimating savings and spending behavior</li>
+<li>supporting financial health assessment</li>
+</ul>
+<p>Bank statement analysis provides a direct view into a user’s financial activity and liquidity patterns.</p>
+<h3 id="s-11-3-2">Bank Statement Characteristics</h3>
+<p>Bank statements typically contain structured records describing financial transactions.</p>
+<p>Common fields include:</p>
+<ul>
+<li>transaction date</li>
+<li>transaction description</li>
+<li>debit or credit amount</li>
+<li>account balance</li>
+<li>Example transaction structure:</li>
+<li>BankTransaction</li>
+<li>transaction_date</li>
+<li>description</li>
+<li>debit_amount</li>
+<li>credit_amount</li>
+<li>balance</li>
+<li>These records form the primary input for transaction analysis.</li>
+</ul>
+<h3 id="s-11-3-3">Bank Statement Processing Workflow</h3>
+<p>The bank statement analysis pipeline follows a structured processing workflow.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Bank Statement Upload
+        ↓
+Document Preprocessing
+        ↓
+Text Extraction
+        ↓
+Transaction Parsing
+        ↓
+Transaction Categorization
+        ↓
+Financial Insight Generation</pre>
+<p>This workflow transforms raw transaction data into structured financial insights.</p>
+<h3 id="s-11-3-4">Transaction Extraction</h3>
+<p>The first stage involves extracting transaction records from the bank statement.</p>
+<p>Extraction may involve:</p>
+<p>parsing tabular transaction data</p>
+<p>identifying debit and credit entries</p>
+<p>detecting transaction timestamps</p>
+<p>Example structure:</p>
+<p>ExtractedTransaction date description amount transaction_type</p>
+<p>The extracted transactions are stored in the platform’s financial data infrastructure.</p>
+<h3 id="s-11-3-5">Transaction Classification</h3>
+<p>Transactions are classified into categories that describe their financial purpose.</p>
+<p>Typical transaction categories include:</p>
+<ul>
+<li>income deposits</li>
+<li>household expenses</li>
+<li>loan repayments</li>
+<li>investment transfers</li>
+<li>Example structure:</li>
+<li>TransactionCategory</li>
+<li>category_name</li>
+<li>category_type</li>
+<li>Categorization allows the system to understand financial behavior patterns.</li>
+</ul>
+<h3 id="s-11-3-6">Income Detection</h3>
+<p>Bank statement analysis identifies recurring income deposits.</p>
+<p>Common income sources include:</p>
+<ul>
+<li>salary deposits</li>
+<li>business income</li>
+<li>investment income</li>
+<li>Example workflow:</li>
+<li>Credit Transactions</li>
+<li>↓</li>
+<li>Pattern Detection</li>
+<li>↓</li>
+<li>Income Source Identification</li>
+<li>Income detection helps estimate financial capacity and savings potential.</li>
+</ul>
+<h3 id="s-11-3-7">Expense Pattern Analysis</h3>
+<p>The system analyzes expense patterns to understand spending behavior.</p>
+<p>Key expense categories may include:</p>
+<ul>
+<li>housing expenses</li>
+<li>utilities and bills</li>
+<li>discretionary spending</li>
+<li>loan repayments</li>
+<li>Example structure:</li>
+<li>ExpensePattern</li>
+<li>category</li>
+<li>monthly_average</li>
+<li>Expense patterns are used to assess financial stability.</li>
+</ul>
+<h3 id="s-11-3-8">Recurring Payment Detection</h3>
+<p>Recurring transactions are identified to detect regular financial obligations.</p>
+<p>Examples include:</p>
+<ul>
+<li>rent payments</li>
+<li>loan EMI payments</li>
+<li>subscription services</li>
+<li>Example detection workflow:</li>
+<li>Transaction History</li>
+<li>↓</li>
+<li>Pattern Detection</li>
+<li>↓</li>
+<li>Recurring Transaction Identification</li>
+<li>Recurring payments influence financial health and liquidity assessments.</li>
+</ul>
+<h3 id="s-11-3-9">Cash Flow Analysis</h3>
+<p>Bank statements allow the platform to estimate net cash flow.</p>
+<p>Example calculation:</p>
+<p>NetCashFlow = TotalIncome - TotalExpenses</p>
+<p>Positive cash flow indicates financial surplus available for investment.</p>
+<h3 id="s-11-3-10">Savings Rate Estimation</h3>
+<p>Savings rate estimation measures how much of the user’s income remains after expenses.</p>
+<p>Example calculation:</p>
+<p>SavingsRate = (NetCashFlow / TotalIncome)</p>
+<p>Higher savings rates indicate stronger financial capacity for investing.</p>
+<h3 id="s-11-3-11">Financial Health Indicators</h3>
+<p>The system derives financial health indicators from bank transaction data.</p>
+<p>Examples include:</p>
+<ul>
+<li>income stability</li>
+<li>expense consistency</li>
+<li>liquidity reserves</li>
+<li>Example structure:</li>
+<li>FinancialHealthIndicators</li>
+<li>income_stability_score</li>
+<li>savings_rate</li>
+<li>expense_variability</li>
+<li>These indicators contribute to user risk profiling and recommendation systems.</li>
+</ul>
+<h3 id="s-11-3-12">Integration with Financial Profiles</h3>
+<p>Extracted insights are integrated into the user’s financial profile dataset.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Bank Statement Insights
+        ↓
+Financial Profile Update
+        ↓
+Risk Profiling Engine</pre>
+<p>This integration improves the accuracy of financial analysis.</p>
+<h3 id="s-11-3-13">Data Validation and Error Handling</h3>
+<p>Bank statement analysis includes validation mechanisms to ensure accuracy.</p>
+<p>Validation checks may include:</p>
+<ul>
+<li>verifying transaction totals</li>
+<li>detecting duplicate records</li>
+<li>validating date consistency</li>
+<li>Example workflow:</li>
+<li>Extracted Transactions</li>
+<li>↓</li>
+<li>Validation Rules</li>
+<li>↓</li>
+<li>Validated Transaction Dataset</li>
+<li>Only validated data is used for financial analysis.</li>
+</ul>
+<h3 id="s-11-3-14">Importance in the Financial Intelligence Platform</h3>
+<p>Bank statement analysis provides direct insight into the user’s financial activity and liquidity position. Unlike static financial records, transaction data reflects real-time financial behavior, allowing the platform to estimate income stability, spending patterns, and savings capacity.</p>
+<p>These insights strengthen financial profiling, improve risk assessment accuracy, and enable more personalized investment recommendations.</p>
+<p>Bank statement analysis therefore serves as a critical component of the platform’s financial intelligence capabilities.</p>
+<h2 id="s-11-4">Insurance Document Processing</h2>
+<p>Insurance Document Processing enables the Multiplus AI Financial Intelligence Platform to extract structured insurance information from insurance policy documents and related statements. Insurance policies often contain critical financial protection details that are essential for evaluating a user’s overall financial health and risk exposure.</p>
+<p>Many insurance documents exist in unstructured formats such as PDFs or scanned files. These documents may include policy contracts, premium schedules, coverage summaries, and benefit descriptions. Insurance document processing converts these documents into structured data that can be integrated into the platform’s financial profile and financial planning systems.</p>
+<p>This section describes the architecture and workflow used to process insurance documents.</p>
+<h3 id="s-11-4-1">Purpose of Insurance Document Processing</h3>
+<p>The primary objective of insurance document processing is to extract key policy details from insurance documents and convert them into structured records.</p>
+<p>Key objectives include:</p>
+<ul>
+<li>identifying active insurance policies</li>
+<li>extracting coverage information</li>
+<li>identifying premium obligations</li>
+<li>evaluating financial protection levels</li>
+</ul>
+<p>This information helps the platform assess whether a user’s financial risk exposure is adequately protected.</p>
+<h3 id="s-11-4-2">Types of Insurance Documents</h3>
+<p>The platform may process various types of insurance-related documents.</p>
+<p>Common document types include:</p>
+<ul>
+<li>life insurance policy documents</li>
+<li>health insurance policy summaries</li>
+<li>insurance premium statements</li>
+<li>policy benefit schedules</li>
+<li>Each document type contains different types of financial information.</li>
+</ul>
+<h3 id="s-11-4-3">Insurance Document Processing Workflow</h3>
+<p>Insurance document processing follows a structured workflow similar to other document intelligence pipelines.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Insurance Document Upload
+        ↓
+Document Preprocessing
+        ↓
+Text Extraction
+        ↓
+Policy Information Detection
+        ↓
+Structured Insurance Data Generation</pre>
+<p>This workflow converts insurance documents into structured policy datasets.</p>
+<h3 id="s-11-4-4">Policyholder Identification</h3>
+<p>The system first extracts policyholder information from the insurance document.</p>
+<p>Typical fields include:</p>
+<ul>
+<li>policyholder name</li>
+<li>policy number</li>
+<li>insurer name</li>
+<li>Example structure:</li>
+<li>PolicyholderInformation</li>
+<li>policyholder_name</li>
+<li>policy_number</li>
+<li>insurer_name</li>
+<li>This information links the policy to the correct user profile.</li>
+</ul>
+<h3 id="s-11-4-5">Policy Type Detection</h3>
+<p>Insurance policies must be categorized according to the type of financial protection they provide.</p>
+<p>Common policy types include:</p>
+<ul>
+<li>term life insurance</li>
+<li>health insurance</li>
+<li>endowment policies</li>
+<li>unit-linked insurance plans</li>
+<li>Example structure:</li>
+<li>InsurancePolicyType</li>
+<li>term_life</li>
+<li>health</li>
+<li>endowment</li>
+<li>ULIP</li>
+</ul>
+<p>Policy classification helps determine the role of insurance in financial planning.</p>
+<h3 id="s-11-4-6">Coverage Amount Extraction</h3>
+<p>Insurance documents contain information about the coverage amount provided by the policy.</p>
+<p>Example fields include:</p>
+<ul>
+<li>sum assured</li>
+<li>coverage limits</li>
+<li>benefit payout values</li>
+<li>Example structure:</li>
+<li>CoverageInformation</li>
+<li>sum_assured</li>
+<li>coverage_amount</li>
+<li>Coverage values help assess the adequacy of financial protection.</li>
+</ul>
+<h3 id="s-11-4-7">Premium Schedule Extraction</h3>
+<p>The system also extracts premium payment information.</p>
+<p>Typical fields include:</p>
+<ul>
+<li>premium amount</li>
+<li>premium payment frequency</li>
+<li>premium due dates</li>
+<li>Example structure:</li>
+<li>PremiumSchedule</li>
+<li>premium_amount</li>
+<li>payment_frequency</li>
+<li>next_due_date</li>
+<li>Premium obligations influence the user’s financial commitments and cash flow.</li>
+</ul>
+<h3 id="s-11-4-8">Policy Duration and Term</h3>
+<p>Insurance policies include information about their duration and maturity.</p>
+<p>Typical fields include:</p>
+<ul>
+<li>policy start date</li>
+<li>maturity date</li>
+<li>coverage duration</li>
+<li>Example structure:</li>
+<li>PolicyDuration</li>
+<li>policy_start_date</li>
+<li>maturity_date</li>
+<li>Policy duration data helps evaluate long-term financial protection.</li>
+</ul>
+<h3 id="s-11-4-9">Policy Benefit Extraction</h3>
+<p>Insurance policies may include multiple benefit structures.</p>
+<p>Examples include:</p>
+<ul>
+<li>death benefit</li>
+<li>maturity benefit</li>
+<li>hospitalization coverage</li>
+<li>Example structure:</li>
+<li>PolicyBenefits</li>
+<li>death_benefit</li>
+<li>maturity_benefit</li>
+<li>health_coverage_limit</li>
+</ul>
+<p>Benefit extraction allows the system to evaluate the scope of insurance coverage.</p>
+<h3 id="s-11-4-10">Data Normalization</h3>
+<p>Extracted policy data must be standardized before integration into the financial data infrastructure.</p>
+<p>Normalization operations may include:</p>
+<ul>
+<li>converting monetary values into standard currency formats</li>
+<li>standardizing date formats</li>
+<li>normalizing policy type classifications</li>
+<li>Example workflow:</li>
+<li>Extracted Policy Data</li>
+<li>↓</li>
+<li>Normalization</li>
+<li>↓</li>
+<li>Standardized Insurance Dataset</li>
+<li>Normalization ensures consistent data representation.</li>
+</ul>
+<h3 id="s-11-4-11">Integration with Financial Profiles</h3>
+<p>After normalization, the extracted insurance data is integrated into the user’s financial profile.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Validated Insurance Data
+        ↓
+Financial Profile Database
+        ↓
+Financial Protection Analysis</pre>
+<p>This integration allows the system to evaluate whether the user has adequate financial protection.</p>
+<h3 id="s-11-4-12">Insurance Coverage Analysis</h3>
+<p>The platform may analyze insurance coverage relative to financial needs.</p>
+<p>Examples include:</p>
+<ul>
+<li>evaluating life insurance coverage relative to income</li>
+<li>assessing health insurance coverage adequacy</li>
+<li>identifying gaps in financial protection</li>
+<li>Example workflow:</li>
+<li>Insurance Data</li>
+<li>↓</li>
+<li>Coverage Evaluation</li>
+<li>↓</li>
+<li>Protection Gap Identification</li>
+<li>These insights can influence financial planning recommendations.</li>
+</ul>
+<h3 id="s-11-4-13">Importance in the Financial Intelligence Platform</h3>
+<p>Insurance document processing enables the platform to incorporate financial protection information into the user’s financial profile. Investments and savings represent only one aspect of financial well-being. Adequate insurance coverage is essential for protecting financial stability.</p>
+<p>By extracting policy details from insurance documents, the platform gains visibility into the user’s insurance coverage and financial protection strategies. This information supports more comprehensive financial analysis and improves the quality of financial planning recommendations generated by the system.</p>
+<h2 id="s-11-5">OCR Pipeline Architecture</h2>
+<p>OCR Pipeline Architecture defines the system used to extract text from scanned or image-based financial documents using Optical Character Recognition (OCR). Many financial documents, including bank statements, insurance policies, and investment statements, are often provided as scanned PDFs or image files that do not contain machine-readable text.</p>
+<p>To enable automated analysis of these documents, the platform must convert visual document content into structured text that can be processed by downstream parsing systems. The OCR pipeline performs this conversion while preserving document layout information such as tables, headers, and labeled fields.</p>
+<p>Within the Multiplus AI Financial Intelligence Platform, the OCR pipeline operates as a foundational component of the Document Intelligence subsystem.</p>
+<h3 id="s-11-5-1">Purpose of the OCR Pipeline</h3>
+<p>The primary objective of the OCR pipeline is to convert image-based documents into machine-readable text.</p>
+<p>Key objectives include:</p>
+<ul>
+<li>extracting text from scanned documents</li>
+<li>preserving document layout and structure</li>
+<li>enabling downstream document parsing</li>
+<li>supporting financial data extraction from non-text documents</li>
+</ul>
+<p>OCR processing expands the platform’s ability to analyze a wider range of financial documents.</p>
+<h3 id="s-11-5-2">OCR Pipeline Workflow</h3>
+<p>The OCR pipeline follows a structured multi-stage workflow.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Document Upload
+        ↓
+Image Preprocessing
+        ↓
+OCR Text Extraction
+        ↓
+Layout Detection
+        ↓
+Structured Text Output</pre>
+<p>This workflow converts scanned documents into structured textual representations.</p>
+<h3 id="s-11-5-2b">Phase 1 Document OCR Processing Flow</h3>
+<p>The following diagram illustrates the Phase 1 AI integration flow for document OCR processing: from user upload through the Quarkus backend, AI module, and OCR pipeline to database storage.</p>
+<figure class="diagram-figure" aria-label="Document OCR Processing (Phase 1)">
+  <img src="assets/diagrams/document-ocr-processing.svg" alt="Document OCR Processing (Phase 1): User uploads document to Frontend; Frontend sends to Quarkus Backend; Backend validates, stores file, creates document record, stores metadata; Backend triggers AI Module OCR pipeline; OCR preprocesses images, extracts text, returns raw text; AI Module extracts structured financial data and stores to Database; Backend updates document status." width="100%" style="max-width: 100%; height: auto;">
+  <figcaption>Document OCR Processing (Phase 1) — Upload, backend orchestration, AI module, OCR pipeline, and persistence.</figcaption>
+</figure>
+<h3 id="s-11-5-3">Supported Document Formats</h3>
+<p>The OCR pipeline must support multiple document formats.</p>
+<p>Common supported formats include:</p>
+<ul>
+<li>scanned PDF documents</li>
+<li>image files (PNG, JPEG)</li>
+<li>scanned bank statements</li>
+<li>scanned financial forms</li>
+</ul>
+<p>Supporting multiple formats ensures compatibility with diverse financial document sources.</p>
+<h3 id="s-11-5-4">Image Preprocessing</h3>
+<p>Before OCR extraction begins, document images undergo preprocessing to improve text recognition accuracy.</p>
+<p>Preprocessing operations may include:</p>
+<ul>
+<li>noise reduction</li>
+<li>image sharpening</li>
+<li>contrast enhancement</li>
+<li>skew correction</li>
+<li>Example workflow:</li>
+<li>Scanned Document Image</li>
+<li>↓</li>
+<li>Noise Removal</li>
+<li>↓</li>
+<li>Image Enhancement</li>
+<li>Preprocessing improves the quality of text extraction.</li>
+</ul>
+<h3 id="s-11-5-5">Text Detection</h3>
+<p>Text detection identifies regions of the document that contain textual content.</p>
+<p>Typical operations include:</p>
+<ul>
+<li>identifying text blocks</li>
+<li>detecting table regions</li>
+<li>detecting column structures</li>
+<li>Example workflow:</li>
+<li>Preprocessed Image</li>
+<li>↓</li>
+<li>Text Region Detection</li>
+<li>↓</li>
+<li>Text Extraction Zones</li>
+</ul>
+<p>Detecting text regions improves OCR accuracy by focusing extraction on relevant areas.</p>
+<h3 id="s-11-5-6">OCR Text Extraction</h3>
+<p>Once text regions are identified, the OCR engine converts image content into text.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Text Regions
+        ↓
+OCR Engine
+        ↓
+Raw Text Output</pre>
+<p>The OCR engine produces the raw text representation of the document.</p>
+<h3 id="s-11-5-7">Layout Analysis</h3>
+<p>Financial documents often contain structured layouts such as tables and labeled fields.</p>
+<p>Layout analysis identifies:</p>
+<p>table structures</p>
+<p>column alignments</p>
+<p>section headings</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Raw OCR Text
+        ↓
+Layout Analysis
+        ↓
+Structured Text Representation</pre>
+<p>Layout analysis allows the platform to interpret document structure accurately.</p>
+<h3 id="s-11-5-8">Table Recognition</h3>
+<p>Many financial documents contain tabular data representing transactions, holdings, or financial metrics.</p>
+<p>The OCR pipeline must detect and extract these tables.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Detected Table Region
+        ↓
+Row and Column Detection
+        ↓
+Structured Table Data</pre>
+<p>Table recognition is essential for extracting financial records accurately.</p>
+<h3 id="s-11-5-9">Text Post-Processing</h3>
+<p>OCR output may contain recognition errors or formatting inconsistencies.</p>
+<p>Post-processing operations may include:</p>
+<ul>
+<li>correcting common OCR errors</li>
+<li>removing extraneous characters</li>
+<li>standardizing numeric formats</li>
+<li>Example workflow:</li>
+<li>Raw OCR Text</li>
+<li>↓</li>
+<li>Text Cleaning</li>
+<li>↓</li>
+<li>Normalized Text Output</li>
+<li>Post-processing improves the accuracy of downstream document parsing.</li>
+</ul>
+<h3 id="s-11-5-10">Structured Text Output</h3>
+<p>After OCR extraction and post-processing, the pipeline generates structured textual data that can be used by document parsing systems.</p>
+<p>Example structure:</p>
+<p>OCRDocumentOutput document_id extracted_text layout_metadata</p>
+<p>This output serves as input for financial document parsing modules.</p>
+<h3 id="s-11-5-11">Integration with Document Parsing Systems</h3>
+<p>The OCR pipeline feeds structured text into specialized document parsing systems.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">OCR Output
+        ↓
+Document Parsing Engine
+        ↓
+Structured Financial Data</pre>
+<p>This integration enables extraction of financial information from scanned documents.</p>
+<h3 id="s-11-5-12">Error Detection and Quality Monitoring</h3>
+<p>OCR pipelines must monitor extraction quality to detect recognition errors.</p>
+<p>Quality checks may include:</p>
+<ul>
+<li>detecting unreadable text regions</li>
+<li>validating extracted numerical values</li>
+<li>identifying incomplete document sections</li>
+<li>Example workflow:</li>
+<li>OCR Output</li>
+<li>↓</li>
+<li>Quality Validation</li>
+<li>↓</li>
+<li>Verified Text Data</li>
+<li>Quality monitoring ensures reliability of extracted document data.</li>
+</ul>
+<h3 id="s-11-5-13">Importance in the Document Intelligence System</h3>
+<p>The OCR pipeline enables the platform to process financial documents that are not originally machine-readable. Many financial records provided by banks, insurers, and investment providers exist only as scanned documents.</p>
+<p>By converting visual document content into structured text, the OCR pipeline unlocks access to valuable financial data that can be used for portfolio analysis, financial profiling, and recommendation generation.</p>
+<p>This capability significantly expands the scope of financial intelligence that the Multiplus AI Financial Intelligence Platform can deliver.</p>
+<h2 id="s-11-6">Document Entity Extraction</h2>
+<p>Document Entity Extraction is responsible for identifying and extracting specific financial entities from processed document text. After OCR and document parsing stages convert financial documents into machine-readable text, entity extraction identifies meaningful financial elements such as account identifiers, transaction values, policy numbers, investment schemes, and monetary values.</p>
+<p>Within the Multiplus AI Financial Intelligence Platform, entity extraction converts raw textual content into structured financial entities that can be mapped into the platform’s financial data models. This process enables automated interpretation of financial documents without requiring manual review.</p>
+<p>This section describes the architecture and methods used to detect and extract financial entities from processed documents.</p>
+<h3 id="s-11-6-1">Purpose of Entity Extraction</h3>
+<p>The primary objective of document entity extraction is to identify and isolate key financial data elements within document text.</p>
+<p>Key objectives include:</p>
+<ul>
+<li>detecting financial entities in documents</li>
+<li>converting textual information into structured data fields</li>
+<li>supporting automated document interpretation</li>
+<li>enabling downstream financial analysis</li>
+</ul>
+<p>Entity extraction transforms unstructured text into structured financial information.</p>
+<h3 id="s-11-6-2">Types of Financial Entities</h3>
+<p>Financial documents contain multiple types of entities that are relevant to financial analysis.</p>
+<p>Common entity categories include:</p>
+<ul>
+<li>account identifiers</li>
+<li>financial transaction values</li>
+<li>investment product names</li>
+<li>policy numbers</li>
+<li>monetary values</li>
+<li>Each entity type contributes to reconstructing financial records.</li>
+</ul>
+<h3 id="s-11-6-3">Entity Extraction Workflow</h3>
+<p>The entity extraction pipeline follows a structured workflow.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">OCR Output Text
+        ↓
+Text Preprocessing
+        ↓
+Entity Detection
+        ↓
+Entity Classification
+        ↓
+Structured Entity Dataset</pre>
+<p>This workflow converts raw document text into structured financial entities.</p>
+<h3 id="s-11-6-4">Text Preprocessing</h3>
+<p>Before entity detection begins, document text is normalized and cleaned.</p>
+<p>Preprocessing operations may include:</p>
+<ul>
+<li>removing extraneous characters</li>
+<li>correcting OCR artifacts</li>
+<li>standardizing date and currency formats</li>
+<li>Example workflow:</li>
+<li>Raw OCR Text</li>
+<li>↓</li>
+<li>Text Normalization</li>
+<li>↓</li>
+<li>Cleaned Text Data</li>
+<li>Preprocessing improves the accuracy of entity detection models.</li>
+</ul>
+<h3 id="s-11-6-5">Entity Detection Methods</h3>
+<p>Entity detection identifies candidate entities within document text.</p>
+<p>Detection techniques may include:</p>
+<ul>
+<li>pattern matching rules</li>
+<li>regular expression detection</li>
+<li>machine learning models</li>
+<li>Example workflow:</li>
+<li>Document Text</li>
+<li>↓</li>
+<li>Entity Detection Model</li>
+<li>↓</li>
+<li>Detected Entity Candidates</li>
+<li>Multiple detection methods may be used simultaneously to improve coverage.</li>
+</ul>
+<h3 id="s-11-6-6">Named Entity Recognition Models</h3>
+<p>Machine learning models may be used to identify entities within document text using named entity recognition (NER) techniques.</p>
+<p>Examples of financial entities detected by NER models include:</p>
+<ul>
+<li>financial institution names</li>
+<li>product identifiers</li>
+<li>monetary amounts</li>
+<li>transaction descriptions</li>
+<li>Example structure:</li>
+<li>DetectedEntity</li>
+<li>entity_text</li>
+<li>entity_type</li>
+<li>document_position</li>
+<li>NER models improve detection of complex entity patterns.</li>
+</ul>
+<h3 id="s-11-6-7">Entity Classification</h3>
+<p>After detection, entities are classified according to their financial meaning.</p>
+<p>Common entity classes include:</p>
+<ul>
+<li>transaction amount</li>
+<li>account number</li>
+<li>investment scheme name</li>
+<li>policy identifier</li>
+<li>Example structure:</li>
+<li>EntityClassification</li>
+<li>entity_text</li>
+<li>entity_type</li>
+<li>Classification allows entities to be mapped to financial data models.</li>
+</ul>
+<h3 id="s-11-6-8">Monetary Value Extraction</h3>
+<p>Financial documents contain numerous monetary values that must be extracted accurately.</p>
+<p>Examples include:</p>
+<ul>
+<li>transaction amounts</li>
+<li>account balances</li>
+<li>investment values</li>
+<li>insurance premiums</li>
+<li>Example structure:</li>
+<li>MonetaryValue</li>
+<li>currency</li>
+<li>amount</li>
+<li>Monetary value extraction is essential for financial calculations.</li>
+</ul>
+<h3 id="s-11-6-9">Date and Time Extraction</h3>
+<p>Many financial entities are associated with dates or time periods.</p>
+<p>Examples include:</p>
+<ul>
+<li>transaction dates</li>
+<li>policy start dates</li>
+<li>statement periods</li>
+<li>Example structure:</li>
+<li>DateEntity</li>
+<li>date_value</li>
+<li>associated_event</li>
+<li>Date extraction allows reconstruction of financial timelines.</li>
+</ul>
+<h3 id="s-11-6-10">Product and Institution Detection</h3>
+<p>Financial documents often reference financial institutions or investment products.</p>
+<p>Examples include:</p>
+<ul>
+<li>mutual fund scheme names</li>
+<li>bank names</li>
+<li>insurance providers</li>
+<li>Example structure:</li>
+<li>FinancialEntity</li>
+<li>institution_name</li>
+<li>product_name</li>
+<li>These entities are used to link document data with platform datasets.</li>
+</ul>
+<h3 id="s-11-6-11">Entity Validation</h3>
+<p>Extracted entities must undergo validation to ensure correctness.</p>
+<p>Validation checks may include:</p>
+<ul>
+<li>verifying numeric formats</li>
+<li>validating entity types against expected patterns</li>
+<li>detecting duplicate entities</li>
+<li>Example workflow:</li>
+<li>Extracted Entities</li>
+<li>↓</li>
+<li>Validation Rules</li>
+<li>↓</li>
+<li>Validated Entity Dataset</li>
+<li>Validation improves reliability of extracted financial data.</li>
+</ul>
+<h3 id="s-11-6-12">Structured Entity Storage</h3>
+<p>Validated entities are stored in structured datasets within the financial data infrastructure.</p>
+<p>Example structure:</p>
+<p>DocumentEntityDataset document_id entity_type entity_value</p>
+<p>Structured storage allows entities to be consumed by downstream systems.</p>
+<h3 id="s-11-6-13">Integration with Financial Data Models</h3>
+<p>Extracted entities are mapped to the platform’s financial data models.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Document Entities
+        ↓
+Entity Mapping
+        ↓
+Financial Data Models</pre>
+<p>This mapping enables integration with financial analysis systems.</p>
+<h3 id="s-11-6-14">Importance in the Document Intelligence System</h3>
+<p>Document entity extraction is the critical step that transforms document text into actionable financial data. Without entity extraction, document processing systems would only produce raw text that cannot be directly used by analytical systems.</p>
+<p>By detecting and classifying financial entities within documents, the platform gains the ability to reconstruct financial records, analyze financial behavior, and integrate document-derived insights into user financial profiles.</p>
+<p>This capability significantly enhances the platform’s ability to understand and analyze complex financial documents.</p>
+<h2 id="s-11-7">Structured Data Conversion</h2>
+<p>Structured Data Conversion is the final stage of the document intelligence pipeline, responsible for transforming extracted entities and parsed document content into standardized financial data structures compatible with the platform’s core data models. After document parsing, OCR processing, and entity extraction have identified relevant information within financial documents, the system must convert this information into normalized datasets that can be integrated with other financial data sources.</p>
+<p>Within the Multiplus AI Financial Intelligence Platform, structured data conversion ensures that document-derived data can be reliably consumed by downstream systems such as financial profiling, portfolio analysis, and recommendation engines.</p>
+<p>This section describes the architecture and processes used to convert extracted document information into structured financial datasets.</p>
+<h3 id="s-11-7-1">Purpose of Structured Data Conversion</h3>
+<p>The primary objective of structured data conversion is to transform extracted document entities into standardized data records aligned with the platform’s financial data models.</p>
+<p>Key objectives include:</p>
+<ul>
+<li>converting extracted document data into structured formats</li>
+<li>standardizing field formats and data types</li>
+<li>ensuring compatibility with internal financial databases</li>
+<li>enabling seamless integration with analytical systems</li>
+</ul>
+<p>Structured data conversion ensures that document-derived information becomes part of the platform’s unified financial data ecosystem.</p>
+<h3 id="s-11-7-2">Input Sources for Conversion</h3>
+<p>Structured data conversion consumes outputs from multiple document intelligence components.</p>
+<p>Typical inputs include:</p>
+<ul>
+<li>OCR-generated text outputs</li>
+<li>parsed document fields</li>
+<li>extracted financial entities</li>
+<li>detected transaction records</li>
+<li>Example input structure:</li>
+<li>ExtractedDocumentData</li>
+<li>document_id</li>
+<li>extracted_entities</li>
+<li>parsed_tables</li>
+<li>detected_transactions</li>
+<li>These inputs must be converted into platform-compatible datasets.</li>
+</ul>
+<h3 id="s-11-7-3">Conversion Workflow</h3>
+<p>The structured data conversion process follows a multi-stage workflow.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Extracted Document Data
+        ↓
+Entity Mapping
+        ↓
+Data Normalization
+        ↓
+Structured Record Generation
+        ↓
+Financial Data Storage</pre>
+<p>This workflow ensures that document-derived information is standardized before being stored.</p>
+<h3 id="s-11-7-4">Entity Mapping</h3>
+<p>Entity mapping links extracted document entities to internal financial data fields.</p>
+<p>Example mapping process:</p>
+<pre class="diagram-block">Extracted Entity
+        ↓
+Entity Mapping Rules
+        ↓
+Financial Data Field</pre>
+<p>Example mapping table:</p>
+<p>Extracted Entity        →        Internal Field scheme_name             →        investment_product_name transaction_amount      →        transaction_value policy_number           →        insurance_policy_id</p>
+<p>Mapping ensures consistent representation of financial information.</p>
+<h3 id="s-11-7-5">Data Normalization</h3>
+<p>Normalization ensures that extracted values follow standardized formats across the platform.</p>
+<p>Normalization operations may include:</p>
+<ul>
+<li>currency standardization</li>
+<li>numeric format normalization</li>
+<li>date format standardization</li>
+<li>unit normalization for financial quantities</li>
+<li>Example normalization workflow:</li>
+<li>Extracted Values</li>
+<li>↓</li>
+<li>Normalization Rules</li>
+<li>↓</li>
+<li>Standardized Data Fields</li>
+<li>Normalization ensures compatibility with downstream analytical models.</li>
+</ul>
+<h3 id="s-11-7-6">Transaction Record Conversion</h3>
+<p>Transaction records extracted from documents are converted into structured financial transaction datasets.</p>
+<p>Example structure:</p>
+<p>FinancialTransaction user_id transaction_date transaction_type transaction_amount source_document</p>
+<p>These records can be integrated with bank transaction data and used for financial behavior analysis.</p>
+<h3 id="s-11-7-7">Investment Holding Conversion</h3>
+<p>Investment information extracted from documents such as CAS statements is converted into structured portfolio holdings.</p>
+<p>Example structure:</p>
+<p>PortfolioHolding user_id product_id units_held current_value</p>
+<p>These records are used by the portfolio analysis engine.</p>
+<h3 id="s-11-7-8">Insurance Policy Data Conversion</h3>
+<p>Insurance policy information extracted from documents is converted into structured insurance records.</p>
+<p>Example structure:</p>
+<p>InsurancePolicy policy_id insurer_name policy_type coverage_amount premium_amount</p>
+<p>These records support financial protection analysis.</p>
+<h3 id="s-11-7-9">Data Consistency Validation</h3>
+<p>Converted records must undergo validation to ensure that they are internally consistent and compatible with financial data models.</p>
+<p>Validation checks may include:</p>
+<ul>
+<li>verifying required fields are present</li>
+<li>checking numerical value ranges</li>
+<li>ensuring valid date formats</li>
+<li>Example workflow:</li>
+<li>Structured Records</li>
+<li>↓</li>
+<li>Validation Rules</li>
+<li>↓</li>
+<li>Verified Structured Dataset</li>
+<li>Only validated records are inserted into the financial data infrastructure.</li>
+</ul>
+<h3 id="s-11-7-10">Storage in Financial Data Infrastructure</h3>
+<p>Once validated, structured records are stored in the platform’s financial databases.</p>
+<p>Example architecture:</p>
+<pre class="diagram-block">Structured Document Data
+        ↓
+Financial Data Storage
+        ↓
+User Financial Profile</pre>
+<p>These datasets become part of the unified financial data layer used across the platform.</p>
+<h3 id="s-11-7-11">Integration with Downstream Systems</h3>
+<p>Structured document data is consumed by multiple downstream systems within the platform.</p>
+<p>Example integrations include:</p>
+<ul>
+<li>financial profile construction</li>
+<li>portfolio analysis engine</li>
+<li>risk profiling system</li>
+<li>recommendation engine</li>
+<li>Example workflow:</li>
+<li>Structured Document Data</li>
+<li>↓</li>
+<li>Financial Profile System</li>
+<li>↓</li>
+<li>Portfolio and Risk Analysis</li>
+</ul>
+<p>This integration allows document-derived insights to influence financial intelligence processes.</p>
+<h3 id="s-11-7-12">Error Handling and Data Correction</h3>
+<p>During conversion, inconsistencies or incomplete data may be detected.</p>
+<p>Error handling mechanisms may include:</p>
+<ul>
+<li>rejecting invalid records</li>
+<li>requesting document reprocessing</li>
+<li>flagging uncertain data for review</li>
+<li>Example workflow:</li>
+<li>Conversion Error</li>
+<li>↓</li>
+<li>Error Detection</li>
+<li>↓</li>
+<li>Correction or Reprocessing</li>
+<li>This ensures the reliability of stored financial data.</li>
+</ul>
+<h3 id="s-11-7-13">Importance in the Document Intelligence Pipeline</h3>
+<p>Structured data conversion serves as the bridge between document processing systems and the platform’s financial data infrastructure. Without this conversion layer, extracted document data would remain isolated and difficult to integrate with financial analysis systems.</p>
+<p>By converting document-derived information into standardized datasets, the platform enables seamless integration of external financial records into portfolio analysis, risk assessment, and recommendation systems.</p>
+<p>This capability allows the Multiplus AI Financial Intelligence Platform to build a comprehensive financial profile of each user using both structured data sources and document-based financial records.</p>
+<h2 id="s-11-8">Document Knowledge Graph</h2>
+<p>The Document Knowledge Graph is a structured representation of financial entities and their relationships extracted from financial documents. After document processing, entity extraction, and structured data conversion, the platform constructs a knowledge graph that links related financial entities across multiple documents.</p>
+<p>The knowledge graph enables the Multiplus AI Financial Intelligence Platform to understand relationships between financial accounts, transactions, investments, insurance policies, and institutions. This relational representation improves the system’s ability to reason over financial data and detect patterns that may not be visible when documents are analyzed independently.</p>
+<p>This section describes the architecture and design of the document knowledge graph.</p>
+<h3 id="s-11-8-1">Purpose of the Document Knowledge Graph</h3>
+<p>The primary objective of the document knowledge graph is to represent financial entities and their relationships in a connected data structure.</p>
+<p>Key objectives include:</p>
+<ul>
+<li>linking financial entities extracted from documents</li>
+<li>identifying relationships between financial records</li>
+<li>enabling advanced financial reasoning and analysis</li>
+<li>supporting contextual retrieval of financial information</li>
+</ul>
+<p>The knowledge graph allows the platform to understand how financial elements interact within a user’s financial ecosystem.</p>
+<h3 id="s-11-8-2">Core Graph Components</h3>
+<p>The document knowledge graph is composed of nodes and edges representing financial entities and their relationships.</p>
+<p>Core components include:</p>
+<ul>
+<li>entity nodes</li>
+<li>relationship edges</li>
+<li>document references</li>
+<li>Example structure:</li>
+<li>KnowledgeGraph</li>
+<li>Nodes</li>
+<li>Edges</li>
+</ul>
+<p>Each node represents a financial entity, while edges represent relationships between entities.</p>
+<h3 id="s-11-8-3">Entity Nodes</h3>
+<p>Entity nodes represent financial entities extracted from documents.</p>
+<p>Examples of entity nodes include:</p>
+<ul>
+<li>bank accounts</li>
+<li>investment schemes</li>
+<li>insurance policies</li>
+<li>financial institutions</li>
+<li>transactions</li>
+<li>Example node structure:</li>
+<li>EntityNode</li>
+<li>entity_id</li>
+<li>entity_type</li>
+<li>entity_value</li>
+<li>Nodes provide the basic building blocks of the knowledge graph.</li>
+</ul>
+<h3 id="s-11-8-4">Relationship Edges</h3>
+<p>Edges define relationships between entities.</p>
+<p>Examples include:</p>
+<ul>
+<li>ownership relationships</li>
+<li>transaction relationships</li>
+<li>institutional relationships</li>
+<li>Example structure:</li>
+<li>RelationshipEdge</li>
+<li>source_entity</li>
+<li>target_entity</li>
+<li>relationship_type</li>
+<li>Relationships allow the system to understand how financial entities interact.</li>
+</ul>
+<h3 id="s-11-8-5">Document Reference Layer</h3>
+<p>Each entity in the knowledge graph retains a reference to the source document from which it was extracted.</p>
+<p>Example structure:</p>
+<p>DocumentReference document_id extraction_timestamp</p>
+<p>Document references enable traceability and verification of extracted information.</p>
+<h3 id="s-11-8-6">Graph Construction Workflow</h3>
+<p>The knowledge graph is constructed through a multi-stage process.</p>
+<p>Example workflow:</p>
+<pre class="diagram-block">Extracted Entities
+        ↓
+Entity Normalization
+        ↓
+Relationship Detection
+        ↓
+Knowledge Graph Construction</pre>
+<p>This workflow transforms extracted entities into a connected graph representation.</p>
+<h3 id="s-11-8-7">Entity Normalization</h3>
+<p>Entity normalization ensures that entities referring to the same real-world object are represented as a single node.</p>
+<p>Examples include:</p>
+<ul>
+<li>identical bank accounts appearing in multiple documents</li>
+<li>repeated references to the same investment scheme</li>
+<li>Example process:</li>
+<li>Duplicate Entities</li>
+<li>↓</li>
+<li>Entity Matching</li>
+<li>↓</li>
+<li>Unified Entity Node</li>
+<li>Normalization prevents duplication within the graph.</li>
+</ul>
+<h3 id="s-11-8-8">Relationship Detection</h3>
+<p>Relationships between entities may be inferred from document context.</p>
+<p>Examples include:</p>
+<ul>
+<li>an investment scheme linked to a portfolio holding</li>
+<li>a transaction linked to a bank account</li>
+<li>a policy linked to an insurance provider</li>
+<li>Example process:</li>
+<li>Entity Context Analysis</li>
+<li>↓</li>
+<li>Relationship Inference</li>
+<li>↓</li>
+<li>Graph Edge Creation</li>
+<li>Relationship detection enables deeper financial insights.</li>
+</ul>
+<h3 id="s-11-8-9">Example Knowledge Graph Structure</h3>
+<p>The following example illustrates a simplified financial knowledge graph.</p>
+<p>User ↓ owns Bank Account ↓ contains Transaction ↓ transfers Investment Account ↓ holds Mutual Fund Scheme</p>
+<p>This structure illustrates how financial entities can be connected.</p>
+<h3 id="s-11-8-10">Querying the Knowledge Graph</h3>
+<p>The knowledge graph allows the system to perform complex queries across financial relationships.</p>
+<p>Example queries include:</p>
+<ul>
+<li>identifying all investments linked to a specific bank account</li>
+<li>tracing transactions related to investment purchases</li>
+<li>identifying relationships between financial institutions and user assets</li>
+<li>Example query workflow:</li>
+<li>Graph Query</li>
+<li>↓</li>
+<li>Entity Relationship Traversal</li>
+<li>↓</li>
+<li>Financial Insight</li>
+<li>Graph-based queries enable richer financial intelligence.</li>
+</ul>
+<h3 id="s-11-8-11">Integration with AI Systems</h3>
+<p>The knowledge graph can be used as contextual input for AI-driven financial analysis.</p>
+<p>Example uses include:</p>
+<ul>
+<li>providing context for financial recommendation systems</li>
+<li>enabling LLM-based financial reasoning</li>
+<li>supporting document retrieval systems</li>
+<li>Example workflow:</li>
+<li>Knowledge Graph</li>
+<li>↓</li>
+<li>Context Builder</li>
+<li>↓</li>
+<li>AI Analysis</li>
+<li>Graph context enhances AI decision-making.</li>
+</ul>
+<h3 id="s-11-8-12">Graph Storage Architecture</h3>
+<p>The knowledge graph may be stored using specialized graph storage systems.</p>
+<p>Example architecture:</p>
+<pre class="diagram-block">Document Entities
+        ↓
+Graph Construction Engine
+        ↓
+Knowledge Graph Database</pre>
+<p>Graph storage enables efficient traversal of entity relationships.</p>
+<h3 id="s-11-8-13">Importance in the Financial Intelligence Platform</h3>
+<p>The document knowledge graph provides a unified representation of financial information extracted from multiple documents. By connecting entities across documents and financial records, the system gains a deeper understanding of the user’s financial ecosystem.</p>
+<p>This relational structure enables more sophisticated financial analysis, improves document interpretation, and enhances AI-driven financial intelligence across the Multiplus platform.</p>
